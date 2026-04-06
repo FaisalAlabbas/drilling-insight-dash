@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import type { UserRole, EdgeHealth, SamplingRate, TelemetryPacket, DecisionRecord, AlertEvent } from './types';
-import { generateTelemetrySeries, generateDecisionSeries, generateAlerts, generateTelemetryPacket, generateDecisionRecord } from './mock-data';
+import { generateTelemetrySeries, generateDecisionSeries, generateAlerts, generateTelemetryPacket, generateDecisionRecord, generateAlertsFromData, createManualAlert } from './mock-data';
+import { getRecommendation, checkBackendHealth } from './api-service';
 
 type SidebarModule = 'live' | 'alerts' | 'history' | 'reporting' | 'admin';
 
@@ -18,6 +19,9 @@ interface DashboardContextType {
   telemetry: TelemetryPacket[];
   decisions: DecisionRecord[];
   alerts: AlertEvent[];
+  addAlert: (title: string, description: string, severity?: 'INFO' | 'WARN' | 'CRITICAL') => void;
+  markAlertsAsRead: () => void;
+  unreadAlertCount: number;
   selectedDecision: DecisionRecord | null;
   setSelectedDecision: (d: DecisionRecord | null) => void;
   selectedAlert: AlertEvent | null;
@@ -37,10 +41,55 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [selectedDecision, setSelectedDecision] = useState<DecisionRecord | null>(null);
   const [selectedAlert, setSelectedAlert] = useState<AlertEvent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [backendAvailable, setBackendAvailable] = useState(false);
 
   const [telemetry, setTelemetry] = useState<TelemetryPacket[]>(() => generateTelemetrySeries(180, 10000));
   const [decisions, setDecisions] = useState<DecisionRecord[]>(() => generateDecisionSeries(50));
-  const [alerts] = useState<AlertEvent[]>(() => generateAlerts(25));
+  
+  // Initialize alerts from localStorage
+  const [alerts, setAlerts] = useState<AlertEvent[]>(() => {
+    try {
+      const saved = localStorage.getItem('drilling_alerts');
+      return saved ? JSON.parse(saved) : generateAlerts(25);
+    } catch {
+      return generateAlerts(25);
+    }
+  });
+
+  // Persist alerts to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('drilling_alerts', JSON.stringify(alerts));
+    } catch (error) {
+      console.error('Failed to save alerts to localStorage:', error);
+    }
+  }, [alerts]);
+
+  // Add alert function (for manual alerts)
+  const addAlert = useCallback((title: string, description: string, severity: 'INFO' | 'WARN' | 'CRITICAL' = 'WARN') => {
+    const newAlert = createManualAlert(title, description, severity);
+    setAlerts(prev => [newAlert, ...prev].slice(0, 100)); // Keep last 100 alerts
+  }, []);
+
+  // Mark all alerts as read
+  const markAlertsAsRead = useCallback(() => {
+    setAlerts(prev => prev.map(alert => ({ ...alert, isRead: true })));
+  }, []);
+
+  // Calculate unread count
+  const unreadAlertCount = alerts.filter(a => !a.isRead).length;
+
+  // Mark alerts as read when entering alerts module
+  useEffect(() => {
+    if (activeModule === 'alerts') {
+      markAlertsAsRead();
+    }
+  }, [activeModule, markAlertsAsRead]);
+
+  // Check backend health on mount
+  useEffect(() => {
+    checkBackendHealth().then(setBackendAvailable);
+  }, []);
 
   // Auto-stream telemetry
   const telemetryRef = useRef(telemetry);
@@ -57,27 +106,46 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [samplingRate]);
 
-  // Auto-stream decisions
+  // Auto-stream decisions from backend or mock
   useEffect(() => {
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const packets = telemetryRef.current.slice(-5);
       if (packets.length > 0) {
-        const newDecision = generateDecisionRecord(new Date(), packets);
+        let newDecision: DecisionRecord;
+        
+        // Try to get prediction from backend if available
+        if (backendAvailable && packets.length > 0) {
+          const latestTelemetry = packets[packets.length - 1];
+          const apiDecision = await getRecommendation(latestTelemetry);
+          newDecision = apiDecision || generateDecisionRecord(new Date(), packets);
+        } else {
+          // Fall back to mock generation
+          newDecision = generateDecisionRecord(new Date(), packets);
+        }
+        
         setDecisions(prev => {
           const next = [...prev, newDecision];
           return next.length > 200 ? next.slice(-200) : next;
         });
+
+        // Generate alerts based on real telemetry and decision data
+        const latestTelemetry = packets[packets.length - 1];
+        const newAlerts = generateAlertsFromData(latestTelemetry, newDecision);
+        
+        if (newAlerts.length > 0) {
+          setAlerts(prev => [...newAlerts, ...prev].slice(0, 100)); // Keep last 100 alerts
+        }
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [backendAvailable]);
 
   return (
     <DashboardContext.Provider value={{
       role, setRole, edgeHealth, setEdgeHealth,
       activeModule, setActiveModule, samplingRate, setSamplingRate,
       searchQuery, setSearchQuery,
-      telemetry, decisions, alerts,
+      telemetry, decisions, alerts, addAlert, markAlertsAsRead, unreadAlertCount,
       selectedDecision, setSelectedDecision,
       selectedAlert, setSelectedAlert,
       drawerOpen, setDrawerOpen,

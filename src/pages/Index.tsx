@@ -3,6 +3,9 @@ import { DashboardHeader } from '@/components/DashboardHeader';
 import { DashboardSidebar } from '@/components/DashboardSidebar';
 import { LiveMonitoringView } from '@/components/LiveMonitoringView';
 import { AlertsView } from '@/components/AlertsView';
+import { HistoryView } from '@/components/HistoryView';
+import { ReportingView } from '@/components/ReportingView';
+import { AdminPanel } from '@/components/AdminPanel';
 import { DetailDrawer } from '@/components/DetailDrawer';
 
 function DashboardContent() {
@@ -15,28 +18,13 @@ function DashboardContent() {
       case 'alerts':
         return <AlertsView />;
       case 'history':
-        return (
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <p className="text-muted-foreground text-sm">Run History & Audit Logs</p>
-            <p className="text-xs text-muted-foreground mt-1">Coming in Phase 2</p>
-          </div>
-        );
+        return <HistoryView />;
       case 'reporting':
         if (role === 'Operator') return null;
-        return (
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <p className="text-muted-foreground text-sm">Reporting & Export</p>
-            <p className="text-xs text-muted-foreground mt-1">Coming in Phase 2</p>
-          </div>
-        );
+        return <ReportingView />;
       case 'admin':
         if (role !== 'Admin') return null;
-        return (
-          <div className="bg-card border border-border rounded-lg p-8 text-center">
-            <p className="text-muted-foreground text-sm">Admin Panel</p>
-            <p className="text-xs text-muted-foreground mt-1">Coming in Phase 2</p>
-          </div>
-        );
+        return <AdminPanel />;
       default:
         return <LiveMonitoringView />;
     }

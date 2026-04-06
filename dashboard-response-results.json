@@ -1,0 +1,237 @@
+{
+  "summary": {
+    "dashboardUrl": "http://localhost:8080",
+    "responseTargetMs": 1000,
+    "iterations": 20,
+    "passedChecks": 20,
+    "failedChecks": 0,
+    "passRatePercent": 100,
+    "averageResponseTimeMs": 337.2,
+    "minResponseTimeMs": 273,
+    "maxResponseTimeMs": 994,
+    "p95ResponseTimeMs": 413,
+    "requirementMet": true
+  },
+  "results": [
+    {
+      "check": 1,
+      "timestamp": "2026-03-09T09:20:21.629Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 994,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 2,
+      "timestamp": "2026-03-09T09:20:24.405Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 310,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 3,
+      "timestamp": "2026-03-09T09:20:27.175Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 315,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 4,
+      "timestamp": "2026-03-09T09:20:29.937Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 314,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 5,
+      "timestamp": "2026-03-09T09:20:32.688Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 308,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 6,
+      "timestamp": "2026-03-09T09:20:35.454Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 298,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 7,
+      "timestamp": "2026-03-09T09:20:38.207Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 273,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 8,
+      "timestamp": "2026-03-09T09:20:40.973Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 275,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 9,
+      "timestamp": "2026-03-09T09:20:43.756Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 280,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 10,
+      "timestamp": "2026-03-09T09:20:46.499Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 295,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 11,
+      "timestamp": "2026-03-09T09:20:49.253Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 281,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 12,
+      "timestamp": "2026-03-09T09:20:52.010Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 292,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 13,
+      "timestamp": "2026-03-09T09:20:54.786Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 288,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 14,
+      "timestamp": "2026-03-09T09:20:57.537Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 337,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 15,
+      "timestamp": "2026-03-09T09:21:00.302Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 313,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 16,
+      "timestamp": "2026-03-09T09:21:03.068Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 280,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 17,
+      "timestamp": "2026-03-09T09:21:05.818Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 280,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 18,
+      "timestamp": "2026-03-09T09:21:08.574Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 413,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 19,
+      "timestamp": "2026-03-09T09:21:11.317Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 307,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    },
+    {
+      "check": 20,
+      "timestamp": "2026-03-09T09:21:14.076Z",
+      "status": "PASS",
+      "httpStatus": 200,
+      "responseTimeMs": 291,
+      "targetMs": 1000,
+      "withinTarget": true,
+      "reason": "",
+      "screenshot": null
+    }
+  ]
+}

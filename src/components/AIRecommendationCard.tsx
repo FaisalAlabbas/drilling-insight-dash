@@ -1,15 +1,36 @@
 import { useDashboard } from '@/lib/dashboard-context';
 import { cn } from '@/lib/utils';
-import { Shield, AlertTriangle, CheckCircle2, XCircle, ArrowRight } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle2, XCircle, ArrowRight, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 
 export function AIRecommendationCard() {
-  const { decisions, edgeHealth } = useDashboard();
+  const { decisions, edgeHealth, addAlert } = useDashboard();
+  const [sending, setSending] = useState(false);
   const latest = decisions[decisions.length - 1];
   if (!latest) return null;
 
   const conf = latest.confidence_score;
   const confColor = conf >= 0.75 ? 'text-signal-green' : conf >= 0.5 ? 'text-signal-yellow' : 'text-signal-red';
   const confBg = conf >= 0.75 ? 'bg-signal-green/15' : conf >= 0.5 ? 'bg-signal-yellow/15' : 'bg-signal-red/15';
+
+  const handleSendAlert = async () => {
+    setSending(true);
+    try {
+      // Create alert based on current recommendation
+      const alertMsg = latest.gate_outcome === 'REJECTED' 
+        ? `Safety alert: Command ${latest.steering_command} was REJECTED. Reason: ${latest.rejection_reason}`
+        : `AI Recommendation sent: ${latest.steering_command} (Confidence: ${(conf * 100).toFixed(0)}%)`;
+      
+      addAlert(
+        latest.gate_outcome === 'REJECTED' ? '⚠️ Safety Gate Rejected' : '✓ Command Approved',
+        alertMsg,
+        latest.gate_outcome === 'REJECTED' ? 'CRITICAL' : 'INFO'
+      );
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="bg-card border border-border rounded-lg p-4 space-y-4">
@@ -76,6 +97,16 @@ export function AIRecommendationCard() {
           </span>
         </div>
       </div>
+
+      <Button 
+        onClick={handleSendAlert} 
+        disabled={sending}
+        className="w-full mt-3 bg-primary/80 hover:bg-primary text-xs"
+        size="sm"
+      >
+        <AlertCircle className="h-3 w-3 mr-1.5" />
+        {sending ? 'Sending Alert...' : 'Send Alert'}
+      </Button>
     </div>
   );
 }

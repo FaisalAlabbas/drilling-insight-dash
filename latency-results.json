@@ -1,0 +1,192 @@
+{
+  "summary": {
+    "latencyTargetMs": 100,
+    "iterations": 20,
+    "averageLatencyMs": "55.13",
+    "maxLatencyMs": "55.85",
+    "minLatencyMs": "55.02",
+    "withinTargetPercent": "98.77%"
+  },
+  "results": [
+    {
+      "iteration": 1,
+      "featureExtractionMs": "5.08",
+      "inferenceMs": "40.08",
+      "gatingMs": "6.08",
+      "commandGenerationMs": "4.07",
+      "totalLatencyMs": "55.31",
+      "withinTarget": true
+    },
+    {
+      "iteration": 2,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.02",
+      "gatingMs": "6.02",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.06",
+      "withinTarget": true
+    },
+    {
+      "iteration": 3,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.01",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.04",
+      "withinTarget": true
+    },
+    {
+      "iteration": 4,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.04",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.07",
+      "withinTarget": true
+    },
+    {
+      "iteration": 5,
+      "featureExtractionMs": "5.03",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.05",
+      "withinTarget": true
+    },
+    {
+      "iteration": 6,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.01",
+      "totalLatencyMs": "55.04",
+      "withinTarget": true
+    },
+    {
+      "iteration": 7,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.02",
+      "withinTarget": true
+    },
+    {
+      "iteration": 8,
+      "featureExtractionMs": "5.03",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.04",
+      "withinTarget": true
+    },
+    {
+      "iteration": 9,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.01",
+      "totalLatencyMs": "55.03",
+      "withinTarget": true
+    },
+    {
+      "iteration": 10,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.01",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.03",
+      "withinTarget": true
+    },
+    {
+      "iteration": 11,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.03",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.06",
+      "withinTarget": true
+    },
+    {
+      "iteration": 12,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.03",
+      "withinTarget": true
+    },
+    {
+      "iteration": 13,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.02",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.05",
+      "withinTarget": true
+    },
+    {
+      "iteration": 14,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.01",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.05",
+      "totalLatencyMs": "55.08",
+      "withinTarget": true
+    },
+    {
+      "iteration": 15,
+      "featureExtractionMs": "5.23",
+      "inferenceMs": "40.01",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.24",
+      "withinTarget": true
+    },
+    {
+      "iteration": 16,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.01",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.03",
+      "withinTarget": true
+    },
+    {
+      "iteration": 17,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.00",
+      "totalLatencyMs": "55.03",
+      "withinTarget": true
+    },
+    {
+      "iteration": 18,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.01",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.51",
+      "totalLatencyMs": "55.55",
+      "withinTarget": true
+    },
+    {
+      "iteration": 19,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.04",
+      "commandGenerationMs": "4.78",
+      "totalLatencyMs": "55.85",
+      "withinTarget": true
+    },
+    {
+      "iteration": 20,
+      "featureExtractionMs": "5.02",
+      "inferenceMs": "40.00",
+      "gatingMs": "6.00",
+      "commandGenerationMs": "4.06",
+      "totalLatencyMs": "55.09",
+      "withinTarget": true
+    }
+  ]
+}

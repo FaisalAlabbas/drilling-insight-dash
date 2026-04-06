@@ -1,11 +1,18 @@
-import { Search, Activity, ChevronDown } from 'lucide-react';
+import { Search, Activity, ChevronDown, Brain } from 'lucide-react';
 import { useDashboard } from '@/lib/dashboard-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useNavigate, useLocation } from 'react-router-dom';
 import type { UserRole } from '@/lib/types';
 
 export function DashboardHeader() {
   const { role, setRole, edgeHealth, searchQuery, setSearchQuery } = useDashboard();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isDashboard = location.pathname === '/';
+  const isEvaluation = location.pathname === '/ai-evaluation';
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-4 shrink-0">
@@ -18,18 +25,43 @@ export function DashboardHeader() {
       </div>
 
       <div className="flex-1 max-w-xs">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Search logs & events..."
-            className="h-8 pl-8 text-xs bg-muted border-border"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        {isDashboard && (
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search logs & events..."
+              className="h-8 pl-8 text-xs bg-muted border-border"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 ml-auto">
+        {isDashboard && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/ai-evaluation')}
+            className="flex items-center gap-2 text-xs h-8"
+          >
+            <Brain className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">AI Evaluation</span>
+          </Button>
+        )}
+        {isEvaluation && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-xs h-8"
+          >
+            <Activity className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </Button>
+        )}
+
         <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${
           edgeHealth === 'Healthy'
             ? 'bg-signal-green/15 text-signal-green'

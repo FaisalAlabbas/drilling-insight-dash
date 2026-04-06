@@ -22,6 +22,8 @@ export function LiveMonitoringView() {
       { title: 'RPM', key: 'rpm' as const, unit: 'rpm', color: 'hsl(45, 93%, 58%)' },
       { title: 'Vibration', key: 'vibration_g' as const, unit: 'g', color: 'hsl(0, 72%, 55%)', warn: 5.0 },
       { title: 'ROP', key: 'rop_ft_hr' as const, unit: 'ft/hr', color: 'hsl(32, 95%, 55%)' },
+      { title: 'Gamma Ray', key: 'gamma_gapi' as const, unit: 'gAPI', color: 'hsl(54, 80%, 50%)' },
+      { title: 'Resistivity', key: 'resistivity_ohm_m' as const, unit: 'Ω·m', color: 'hsl(200, 80%, 48%)' },
       { title: 'DLS', key: 'dls_deg_100ft' as const, unit: '°/100ft', color: 'hsl(330, 70%, 55%)', warn: 8.0 },
     ];
 

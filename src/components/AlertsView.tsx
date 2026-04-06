@@ -1,18 +1,16 @@
 import { useDashboard } from '@/lib/dashboard-context';
 import { AlertsFeed } from '@/components/AlertsFeed';
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, Card, CardContent, CardHeader, CardTitle } from 'recharts';
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { AlertCircle } from 'lucide-react';
 import type { AlertSeverity } from '@/lib/types';
 
 export function AlertsView() {
-  const { alerts, selectedAlert, telemetry } = useDashboard();
-  const [filter, setFilter] = useState<AlertSeverity | 'ALL'>('ALL');
+  const { alerts, selectedAlert, telemetry, unreadAlertCount } = useDashboard();
+  const [filter, setFilter] = useState<AlertSeverity | 'ALL' | 'UNREAD'>('ALL');
 
-  const filteredAlerts = useMemo(() => {
-    if (filter === 'ALL') return alerts;
-    return alerts.filter(a => a.severity === filter);
-  }, [alerts, filter]);
+  const unreadAlerts = useMemo(() => alerts.filter(a => !a.isRead), [alerts]);
 
   const contextData = useMemo(() => {
     return telemetry.slice(-60).map(p => ({
@@ -23,35 +21,62 @@ export function AlertsView() {
     }));
   }, [telemetry]);
 
-  const filters: { label: string; value: AlertSeverity | 'ALL' }[] = [
-    { label: 'All', value: 'ALL' },
-    { label: 'Critical', value: 'CRITICAL' },
-    { label: 'Warning', value: 'WARN' },
-    { label: 'Info', value: 'INFO' },
+  const filters: { label: string; value: AlertSeverity | 'ALL' | 'UNREAD'; count?: number }[] = [
+    { label: 'All', value: 'ALL', count: alerts.length },
+    { label: 'Critical', value: 'CRITICAL', count: alerts.filter(a => a.severity === 'CRITICAL').length },
+    { label: 'Warning', value: 'WARN', count: alerts.filter(a => a.severity === 'WARN').length },
+    { label: 'Info', value: 'INFO', count: alerts.filter(a => a.severity === 'INFO').length },
+    { label: 'Unread', value: 'UNREAD', count: unreadAlertCount },
   ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
       <div className="lg:col-span-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Alert Stream</h2>
-          <div className="flex gap-1">
-            {filters.map(f => (
-              <button
-                key={f.value}
-                onClick={() => setFilter(f.value)}
-                className={cn(
-                  "text-[10px] px-2 py-1 rounded font-medium transition-colors",
-                  filter === f.value ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
+        {/* Unread Section */}
+        {unreadAlerts.length > 0 && (
+          <div className="bg-signal-red/10 border border-signal-red/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-4 w-4 text-signal-red" />
+              <h3 className="text-sm font-semibold text-signal-red">Unread Alerts ({unreadAlertCount})</h3>
+            </div>
+            <div className="space-y-2 max-h-[150px] overflow-y-auto">
+              <AlertsFeed filter="UNREAD" />
+            </div>
           </div>
-        </div>
-        <div className="max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
-          <AlertsFeed />
+        )}
+
+        {/* Alert Stream */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold">Alert Stream</h2>
+            <div className="flex gap-1 flex-wrap">
+              {filters.map(f => (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={cn(
+                    "text-[10px] px-2 py-1 rounded font-medium transition-colors flex items-center gap-1",
+                    filter === f.value 
+                      ? "bg-primary/20 text-primary" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {f.label}
+                  {f.count !== undefined && f.count > 0 && (
+                    <span className={cn(
+                      "text-[8px] font-bold px-1 py-0 rounded-full",
+                      filter === f.value ? "bg-primary/30" : "bg-muted"
+                    )}>
+                      {f.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="max-h-[calc(100vh-380px)] overflow-y-auto pr-1">
+            <AlertsFeed filter={filter} />
+          </div>
         </div>
       </div>
 

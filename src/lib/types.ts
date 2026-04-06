@@ -1,6 +1,6 @@
 export type UserRole = 'Operator' | 'Engineer' | 'Admin';
 
-export type SteeringCommand = 'Hold' | 'Build' | 'Drop' | 'Turn Left' | 'Turn Right';
+export type SteeringCommand = 'No Change' | 'Move Upward' | 'Move Downward' | 'Turn Left' | 'Turn Right';
 export type GateOutcome = 'ACCEPTED' | 'REJECTED';
 export type RejectionReason = 'LOW_CONFIDENCE' | 'MISSING_DATA' | 'SENSOR_ANOMALY' | 'LIMIT_EXCEEDED' | null;
 export type ExecutionStatus = 'SENT' | 'BLOCKED';
@@ -19,6 +19,8 @@ export interface TelemetryPacket {
   azimuth_deg: number;
   rop_ft_hr: number;
   dls_deg_100ft: number;
+  gamma_gapi: number;
+  resistivity_ohm_m: number;
 }
 
 export interface FeatureVector {
@@ -68,6 +70,7 @@ export interface AlertEvent {
   description: string;
   related_signals: string[];
   linked_log_timestamp: string;
+  isRead?: boolean;
 }
 
 export interface OperatingLimits {

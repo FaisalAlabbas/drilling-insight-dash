@@ -13,6 +13,8 @@ const SIGNALS = [
   { key: 'azimuth_deg', label: 'Azimuth', unit: '°', color: 'hsl(210, 90%, 60%)' },
   { key: 'rop_ft_hr', label: 'ROP', unit: 'ft/hr', color: 'hsl(32, 95%, 55%)' },
   { key: 'dls_deg_100ft', label: 'DLS', unit: '°/100ft', color: 'hsl(330, 70%, 55%)', limit: OPERATING_LIMITS.max_dls_deg_100ft },
+  { key: 'gamma_gapi', label: 'Gamma Ray', unit: 'gAPI', color: 'hsl(54, 80%, 50%)' },
+  { key: 'resistivity_ohm_m', label: 'Resistivity', unit: 'Ω·m', color: 'hsl(200, 80%, 48%)' },
 ] as const;
 
 export function TelemetryChart() {

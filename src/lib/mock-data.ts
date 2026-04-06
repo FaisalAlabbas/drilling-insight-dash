@@ -14,7 +14,7 @@ let azimuthDrift = 180;
 
 export const OPERATING_LIMITS: OperatingLimits = {
   max_vibration_g: 5.0,
-  max_dls_deg_100ft: 8.0,
+  max_dls_deg_100ft: 6.0,
   wob_range: [5, 35],
   torque_range: [2, 20],
   rpm_range: [60, 220],
@@ -38,6 +38,8 @@ export function generateTelemetryPacket(timestamp: Date): TelemetryPacket {
     azimuth_deg: Math.round(azimuthDrift * 100) / 100,
     rop_ft_hr: Math.round(rand(15, 95) * 10) / 10,
     dls_deg_100ft: Math.round(rand(0.5, 7) * 100) / 100,
+    gamma_gapi: Math.round(rand(30, 150) * 10) / 10,
+    resistivity_ohm_m: Math.round(rand(0.2, 120) * 10) / 10,
   };
 }
 
@@ -76,7 +78,7 @@ function generateFeatureVector(packets: TelemetryPacket[]): FeatureVector {
   };
 }
 
-const COMMANDS: SteeringCommand[] = ['Hold', 'Build', 'Drop', 'Turn Left', 'Turn Right'];
+const COMMANDS: SteeringCommand[] = ['No Change', 'Move Upward', 'Move Downward', 'Turn Left', 'Turn Right'];
 const REJECTION_REASONS: RejectionReason[] = ['LOW_CONFIDENCE', 'MISSING_DATA', 'SENSOR_ANOMALY', 'LIMIT_EXCEEDED'];
 const EVENT_TAGS = ['spike_detected', 'confidence_drop', 'high_vibration', 'dls_warning', 'torque_spike', 'rpm_fluctuation'];
 
@@ -115,31 +117,114 @@ export function generateDecisionSeries(count: number): DecisionRecord[] {
   });
 }
 
-const ALERT_TEMPLATES: { title: string; description: string; severity: AlertSeverity; signals: string[] }[] = [
-  { title: 'Vibration spike detected', description: 'Lateral vibration exceeded 5.0g threshold at near-bit sensor', severity: 'CRITICAL', signals: ['vibration_g', 'rpm'] },
-  { title: 'Confidence dropped below threshold', description: 'AI model confidence fell to 0.41, below the 0.50 operating minimum', severity: 'WARN', signals: ['confidence_score'] },
-  { title: 'Gate blocked command: LIMIT_EXCEEDED', description: 'Safety gate rejected steering command due to DLS exceeding 8.0°/100ft', severity: 'CRITICAL', signals: ['dls_deg_100ft', 'inclination_deg'] },
-  { title: 'RPM fluctuation detected', description: 'Rotational speed variance exceeded normal operating band (±15 RPM)', severity: 'WARN', signals: ['rpm', 'torque_kftlb'] },
-  { title: 'Sensor data gap: MWD', description: 'MWD telemetry gap of 8 seconds detected, possible signal attenuation', severity: 'WARN', signals: ['inclination_deg', 'azimuth_deg'] },
-  { title: 'WOB approaching upper limit', description: 'Weight on bit at 33.5 klbf, nearing 35.0 klbf operational limit', severity: 'INFO', signals: ['wob_klbf'] },
-  { title: 'Torque spike: possible stall', description: 'Torque spiked to 18.7 kft·lb with corresponding RPM drop', severity: 'CRITICAL', signals: ['torque_kftlb', 'rpm'] },
-  { title: 'DLS warning: approaching limit', description: 'Dogleg severity at 7.2°/100ft, approaching 8.0°/100ft limit', severity: 'WARN', signals: ['dls_deg_100ft'] },
-  { title: 'Edge AI model reloaded', description: 'Model edge-ai-rss-v1.3.2 reloaded after transient error recovery', severity: 'INFO', signals: [] },
-  { title: 'ROP degradation detected', description: 'Rate of penetration dropped 40% over last 5 minutes, possible formation change', severity: 'INFO', signals: ['rop_ft_hr', 'wob_klbf'] },
+const ALERT_TEMPLATES: { title: string; description: string; severity: AlertSeverity; signals: string[]; threshold?: (p: TelemetryPacket, d?: DecisionRecord) => boolean }[] = [
+  { 
+    title: 'Vibration spike detected', 
+    description: 'Lateral vibration exceeded threshold at near-bit sensor',
+    severity: 'CRITICAL', 
+    signals: ['vibration_g', 'rpm'],
+    threshold: (p) => p.vibration_g > 4.5
+  },
+  { 
+    title: 'Confidence dropped below threshold', 
+    description: 'AI model confidence fell below 0.50 operating minimum',
+    severity: 'WARN', 
+    signals: ['confidence_score'],
+    threshold: (_, d) => d ? d.confidence_score < 0.5 : false
+  },
+  { 
+    title: 'Gate blocked command: LIMIT_EXCEEDED', 
+    description: 'Safety gate rejected steering command due to DLS exceeding limit',
+    severity: 'CRITICAL', 
+    signals: ['dls_deg_100ft', 'inclination_deg'],
+    threshold: (p) => p.dls_deg_100ft > 6.0
+  },
+  { 
+    title: 'RPM fluctuation detected', 
+    description: 'Rotational speed variance exceeded normal operating band',
+    severity: 'WARN', 
+    signals: ['rpm', 'torque_kftlb'],
+    threshold: (p) => p.rpm > 200 || p.rpm < 60
+  },
+  { 
+    title: 'WOB approaching upper limit', 
+    description: 'Weight on bit nearing operational limit',
+    severity: 'WARN', 
+    signals: ['wob_klbf'],
+    threshold: (p) => p.wob_klbf > 28
+  },
+  { 
+    title: 'Torque spike: possible stall', 
+    description: 'Torque spiked with corresponding RPM drop',
+    severity: 'CRITICAL', 
+    signals: ['torque_kftlb', 'rpm'],
+    threshold: (p) => p.torque_kftlb > 15
+  },
+  { 
+    title: 'DLS warning: approaching limit', 
+    description: 'Dogleg severity approaching operational limit',
+    severity: 'WARN', 
+    signals: ['dls_deg_100ft'],
+    threshold: (p) => p.dls_deg_100ft > 5.5
+  },
+  { 
+    title: 'ROP degradation detected', 
+    description: 'Rate of penetration dropped significantly',
+    severity: 'INFO', 
+    signals: ['rop_ft_hr', 'wob_klbf'],
+    threshold: (p) => p.rop_ft_hr < 20
+  },
 ];
+
+/**
+ * Generate alerts based on real telemetry and decision data
+ */
+export function generateAlertsFromData(packet: TelemetryPacket, decision?: DecisionRecord): AlertEvent[] {
+  const alerts: AlertEvent[] = [];
+  
+  for (const template of ALERT_TEMPLATES) {
+    if (template.threshold && template.threshold(packet, decision)) {
+      alerts.push({
+        id: `ALT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        severity: template.severity,
+        title: template.title,
+        description: template.description,
+        related_signals: template.signals,
+        linked_log_timestamp: new Date().toISOString(),
+      });
+    }
+  }
+  
+  return alerts;
+}
+
+/**
+ * Create a manual alert
+ */
+export function createManualAlert(title: string, description: string, severity: AlertSeverity = 'WARN'): AlertEvent {
+  return {
+    id: `ALT-MANUAL-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    severity,
+    title,
+    description,
+    related_signals: [],
+    linked_log_timestamp: new Date().toISOString(),
+  };
+}
 
 export function generateAlerts(count: number): AlertEvent[] {
   const now = Date.now();
   return Array.from({ length: count }, (_, i) => {
-    const template = pick(ALERT_TEMPLATES);
     const ts = new Date(now - i * randInt(30000, 180000));
     return {
       id: `ALT-${String(1000 + i).padStart(4, '0')}`,
       timestamp: ts.toISOString(),
-      severity: template.severity,
-      title: template.title,
-      description: template.description,
-      related_signals: template.signals,
+      severity: pick(['INFO', 'WARN', 'CRITICAL'] as AlertSeverity[]),
+      title: 'Historical alert',
+      description: 'Past alert from system log',
+      related_signals: [],
       linked_log_timestamp: ts.toISOString(),
     };
   });

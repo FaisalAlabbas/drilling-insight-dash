@@ -12,10 +12,8 @@ const modules = [
 ];
 
 export function DashboardSidebar() {
-  const { activeModule, setActiveModule, role, alerts } = useDashboard();
+  const { activeModule, setActiveModule, role, alerts, unreadAlertCount } = useDashboard();
   const [collapsed, setCollapsed] = useState(false);
-
-  const criticalCount = alerts.filter(a => a.severity === 'CRITICAL').length;
 
   return (
     <>
@@ -64,9 +62,9 @@ export function DashboardSidebar() {
               >
                 <mod.icon className={cn("h-4 w-4", isActive && "text-primary")} />
                 <span className="truncate">{mod.label}</span>
-                {mod.id === 'alerts' && criticalCount > 0 && (
+                {mod.id === 'alerts' && unreadAlertCount > 0 && (
                   <span className="ml-auto text-[10px] font-bold bg-signal-red/20 text-signal-red px-1.5 py-0.5 rounded-full">
-                    {criticalCount}
+                    {unreadAlertCount}
                   </span>
                 )}
               </button>

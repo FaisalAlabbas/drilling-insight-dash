@@ -1,0 +1,131 @@
+{
+  "summary": {
+    "totalChecks": 20,
+    "successfulChecks": 20,
+    "failedChecks": 0,
+    "availability": "100.00%",
+    "averageResponseTime": "12.50 ms"
+  },
+  "results": [
+    {
+      "check": 1,
+      "status": "UP",
+      "responseTime": 48,
+      "timestamp": "2026-03-09T08:51:56.059Z"
+    },
+    {
+      "check": 2,
+      "status": "UP",
+      "responseTime": 9,
+      "timestamp": "2026-03-09T08:52:01.082Z"
+    },
+    {
+      "check": 3,
+      "status": "UP",
+      "responseTime": 7,
+      "timestamp": "2026-03-09T08:52:06.101Z"
+    },
+    {
+      "check": 4,
+      "status": "UP",
+      "responseTime": 10,
+      "timestamp": "2026-03-09T08:52:11.120Z"
+    },
+    {
+      "check": 5,
+      "status": "UP",
+      "responseTime": 4,
+      "timestamp": "2026-03-09T08:52:16.130Z"
+    },
+    {
+      "check": 6,
+      "status": "UP",
+      "responseTime": 13,
+      "timestamp": "2026-03-09T08:52:21.147Z"
+    },
+    {
+      "check": 7,
+      "status": "UP",
+      "responseTime": 4,
+      "timestamp": "2026-03-09T08:52:26.155Z"
+    },
+    {
+      "check": 8,
+      "status": "UP",
+      "responseTime": 4,
+      "timestamp": "2026-03-09T08:52:31.168Z"
+    },
+    {
+      "check": 9,
+      "status": "UP",
+      "responseTime": 25,
+      "timestamp": "2026-03-09T08:52:36.202Z"
+    },
+    {
+      "check": 10,
+      "status": "UP",
+      "responseTime": 17,
+      "timestamp": "2026-03-09T08:52:41.225Z"
+    },
+    {
+      "check": 11,
+      "status": "UP",
+      "responseTime": 26,
+      "timestamp": "2026-03-09T08:52:46.267Z"
+    },
+    {
+      "check": 12,
+      "status": "UP",
+      "responseTime": 24,
+      "timestamp": "2026-03-09T08:52:51.301Z"
+    },
+    {
+      "check": 13,
+      "status": "UP",
+      "responseTime": 5,
+      "timestamp": "2026-03-09T08:52:56.318Z"
+    },
+    {
+      "check": 14,
+      "status": "UP",
+      "responseTime": 6,
+      "timestamp": "2026-03-09T08:53:01.338Z"
+    },
+    {
+      "check": 15,
+      "status": "UP",
+      "responseTime": 5,
+      "timestamp": "2026-03-09T08:53:06.354Z"
+    },
+    {
+      "check": 16,
+      "status": "UP",
+      "responseTime": 7,
+      "timestamp": "2026-03-09T08:53:11.372Z"
+    },
+    {
+      "check": 17,
+      "status": "UP",
+      "responseTime": 7,
+      "timestamp": "2026-03-09T08:53:16.392Z"
+    },
+    {
+      "check": 18,
+      "status": "UP",
+      "responseTime": 18,
+      "timestamp": "2026-03-09T08:53:21.418Z"
+    },
+    {
+      "check": 19,
+      "status": "UP",
+      "responseTime": 7,
+      "timestamp": "2026-03-09T08:53:26.440Z"
+    },
+    {
+      "check": 20,
+      "status": "UP",
+      "responseTime": 4,
+      "timestamp": "2026-03-09T08:53:31.456Z"
+    }
+  ]
+}
