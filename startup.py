@@ -95,10 +95,8 @@ def main():
     
     if package_json.exists() and not node_modules.exists():
         log_info("Installing Node.js dependencies (this may take a moment)...")
-        # Try bun first, fall back to npm
-        if run_command(["bun", "install"], cwd=str(frontend_dir)):
-            log_success("Frontend dependencies installed (bun)")
-        elif run_command(["npm", "install"], cwd=str(frontend_dir)):
+        # Install with npm
+        if run_command(["npm", "install"], cwd=str(frontend_dir)):
             log_success("Frontend dependencies installed (npm)")
         else:
             log_warn("Could not install frontend dependencies")
@@ -110,7 +108,7 @@ def main():
     if not env_file.exists():
         log_info("Creating .env.local for frontend configuration...")
         with open(env_file, 'w') as f:
-            f.write("VITE_API_URL=http://localhost:8000\n")
+            f.write("VITE_AI_BASE_URL=http://localhost:8000\n")
         log_success(".env.local created with API endpoint")
     
     # Step 5: Ready to start servers

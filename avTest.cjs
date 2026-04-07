@@ -1,16 +1,16 @@
 const axios = require("axios");
 const fs = require("fs");
 
-const url = "http://localhost:8080"; 
-const checks = 20;                   
-const interval = 5000;              
+const url = "http://localhost:8080";
+const checks = 20;
+const interval = 5000;
 
 let success = 0;
 let fail = 0;
 let results = [];
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function checkAvailability(i) {
@@ -27,7 +27,7 @@ async function checkAvailability(i) {
         check: i,
         status: "UP",
         responseTime: responseTime,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } else {
       console.log(`Check ${i}: DOWN`);
@@ -36,7 +36,7 @@ async function checkAvailability(i) {
         check: i,
         status: "DOWN",
         responseTime: responseTime,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   } catch (error) {
@@ -48,7 +48,7 @@ async function checkAvailability(i) {
       status: "DOWN",
       responseTime: responseTime,
       timestamp: new Date().toISOString(),
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -66,9 +66,8 @@ async function runTest() {
 
   const availability = (success / checks) * 100;
   const avgResponseTime =
-    results
-      .filter(r => r.status === "UP")
-      .reduce((sum, r) => sum + r.responseTime, 0) / (success || 1);
+    results.filter((r) => r.status === "UP").reduce((sum, r) => sum + r.responseTime, 0) /
+    (success || 1);
 
   console.log("\n--- Results ---");
   console.log(`Successful checks: ${success}`);
@@ -81,7 +80,7 @@ async function runTest() {
     successfulChecks: success,
     failedChecks: fail,
     availability: `${availability.toFixed(2)}%`,
-    averageResponseTime: `${avgResponseTime.toFixed(2)} ms`
+    averageResponseTime: `${avgResponseTime.toFixed(2)} ms`,
   };
 
   fs.writeFileSync(

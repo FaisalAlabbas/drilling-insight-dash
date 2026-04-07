@@ -41,7 +41,7 @@ if (Test-Path $modelPath) {
 Write-Host "Configuring frontend..." -ForegroundColor Blue
 $envFile = Join-Path $frontendDir ".env.local"
 if (-not (Test-Path $envFile)) {
-    "VITE_API_URL=http://localhost:8000" | Out-File -FilePath $envFile -Encoding UTF8
+    "VITE_AI_BASE_URL=http://localhost:8000" | Out-File -FilePath $envFile -Encoding UTF8
     Write-Host "✓ .env.local created" -ForegroundColor Green
 }
 

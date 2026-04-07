@@ -1,24 +1,38 @@
-import { Search, Activity, ChevronDown, Brain } from 'lucide-react';
-import { useDashboard } from '@/lib/dashboard-context';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useNavigate, useLocation } from 'react-router-dom';
-import type { UserRole } from '@/lib/types';
+import { Search, Activity, ChevronDown, Brain, Download } from "lucide-react";
+import { useDashboard } from "@/lib/dashboard-context";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useNavigate, useLocation } from "react-router-dom";
+import type { UserRole } from "@/lib/types";
+import { exportToCSV } from "@/lib/export-utils";
 
 export function DashboardHeader() {
-  const { role, setRole, edgeHealth, searchQuery, setSearchQuery } = useDashboard();
+  const { role, setRole, edgeHealth, searchQuery, setSearchQuery, telemetry, decisions } =
+    useDashboard();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isDashboard = location.pathname === '/';
-  const isEvaluation = location.pathname === '/ai-evaluation';
+  const isDashboard = location.pathname === "/";
+  const isEvaluation = location.pathname === "/ai-evaluation";
+
+  const handleExport = () => {
+    exportToCSV(telemetry, decisions);
+  };
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-4 shrink-0">
       <div className="flex items-center gap-2 mr-4">
         <Activity className="h-5 w-5 text-primary" />
-        <h1 className="text-sm font-semibold tracking-tight hidden sm:block">Surface Dashboard</h1>
+        <h1 className="text-sm font-semibold tracking-tight hidden sm:block">
+          Surface Dashboard
+        </h1>
         <span className="text-[10px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-sm hidden md:inline">
           MONITORING ONLY
         </span>
@@ -40,21 +54,32 @@ export function DashboardHeader() {
 
       <div className="flex items-center gap-3 ml-auto">
         {isDashboard && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/ai-evaluation')}
-            className="flex items-center gap-2 text-xs h-8"
-          >
-            <Brain className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">AI Evaluation</span>
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/ai-evaluation")}
+              className="flex items-center gap-2 text-xs h-8"
+            >
+              <Brain className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">AI Evaluation</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              className="flex items-center gap-2 text-xs h-8"
+            >
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Export CSV</span>
+            </Button>
+          </>
         )}
         {isEvaluation && (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="flex items-center gap-2 text-xs h-8"
           >
             <Activity className="h-3.5 w-3.5" />
@@ -62,14 +87,20 @@ export function DashboardHeader() {
           </Button>
         )}
 
-        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${
-          edgeHealth === 'Healthy'
-            ? 'bg-signal-green/15 text-signal-green'
-            : 'bg-signal-yellow/15 text-signal-yellow'
-        }`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${
-            edgeHealth === 'Healthy' ? 'bg-signal-green signal-pulse' : 'bg-signal-yellow signal-pulse'
-          }`} />
+        <div
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${
+            edgeHealth === "Healthy"
+              ? "bg-signal-green/15 text-signal-green"
+              : "bg-signal-yellow/15 text-signal-yellow"
+          }`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              edgeHealth === "Healthy"
+                ? "bg-signal-green signal-pulse"
+                : "bg-signal-yellow signal-pulse"
+            }`}
+          />
           Edge: {edgeHealth}
         </div>
 

@@ -1,20 +1,53 @@
-import pandas as pd
-import joblib
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Literal
 from datetime import datetime
-import os
 import logging
-import traceback
+import pandas as pd
+import joblib
+import json
+import os
+from dataset import load_controls, get_next_telemetry, get_data_quality
+from logging_config import setup_logging, log_prediction, log_model_load
+from settings import settings
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Setup structured logging
+logger = setup_logging(__name__, settings.LOG_LEVEL)
+
+# Global model variables
+ml_model = None
+model_schema = None
+model_metrics = None
+model_available = False
+
+def load_ml_model():
+    """Load ML model and artifacts on startup"""
+    global ml_model, model_schema, model_metrics, model_available
+
+    try:
+        if os.path.exists(settings.MODEL_PATH) and os.path.exists(settings.SCHEMA_PATH):
+            ml_model = joblib.load(settings.MODEL_PATH)
+            model_schema = joblib.load(settings.SCHEMA_PATH)
+
+            if os.path.exists(settings.METRICS_PATH):
+                with open(settings.METRICS_PATH, 'r') as f:
+                    model_metrics = json.load(f)
+
+            model_available = True
+            log_model_load(logger, True, settings.MODEL_PATH)
+            logger.info(f"Model version: {model_metrics.get('model_version', 'unknown')}")
+        else:
+            logger.warning("ML model files not found, falling back to rule-based logic")
+            log_model_load(logger, False, settings.MODEL_PATH, "Model files not found")
+            model_available = False
+    except Exception as e:
+        logger.error(f"Failed to load ML model: {e}")
+        log_model_load(logger, False, settings.MODEL_PATH, str(e))
+        model_available = False
+
+# Load model on startup
+load_ml_model()
 
 app = FastAPI(
     title="Drilling Insight AI Service",
@@ -22,340 +55,335 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for frontend communication
+# Enable CORS with configurable origins from settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# Get the directory where this api.py file is located
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(CURRENT_DIR, "models/recommendation_model.pkl")
-
-# Global state
-MODEL = None
-MODEL_LOADED = False
-STARTUP_TIME = datetime.utcnow()
-
-def load_model():
-    """Load model with error handling"""
-    global MODEL, MODEL_LOADED
-    try:
-        if os.path.exists(MODEL_PATH):
-            MODEL = joblib.load(MODEL_PATH)
-            MODEL_LOADED = True
-            logger.info(f"Model loaded successfully from {MODEL_PATH}")
-            return True
-        else:
-            logger.warning(f"Model file not found at {MODEL_PATH}")
-            logger.info("API will work with fallback mock predictions")
-            MODEL_LOADED = False
-            return False
-    except Exception as e:
-        logger.error(f"Failed to load model: {str(e)}")
-        logger.info("API will work with fallback mock predictions")
-        MODEL_LOADED = False
-        return False
-
-# Load model on startup
-load_model()
-
-# Define schema for preprocessing
-SCHEMA = {
-    "cat_cols": ["Formation_Class"],
-    "num_cols": [
-        "WOB_klbf", "RPM_demo", "ROP_ft_hr", "PHIF", "VSH", "SW", "KLOGH",
-        "Torque_kftlb", "Vibration_g", "DLS_deg_per_100ft",
-        "Inclination_deg", "Azimuth_deg"
-    ]
-}
-
-# Default control parameters
-DEFAULT_CONTROLS = {
-    "DLS normal max (deg/100ft)": 2.0,
-    "DLS block max (deg/100ft)": 3.0,
-    "Vibration caution max (g)": 0.5,
-    "WOB low preference (klbf)": 20,
-    "WOB high preference (klbf)": 60,
-    "Confidence threshold": 0.5,
-}
-
-# Try to load controls from Excel
-def load_controls():
-    """Load control parameters from Excel with fallback to defaults"""
-    try:
-        excel_path = os.path.join(CURRENT_DIR, "models/rss_dashboard_dataset_built_recalc.xlsx")
-        if os.path.exists(excel_path):
-            controls_df = pd.read_excel(excel_path, sheet_name="Controls")
-            controls = dict(zip(controls_df["Prototype Control Parameters"], controls_df["Unnamed: 1"]))
-            logger.info(f"Controls loaded from Excel: {len(controls)} parameters")
-            return controls
-    except Exception as e:
-        logger.warning(f"Could not load controls from Excel: {str(e)}")
-    
-    logger.info("Using default control parameters")
-    return DEFAULT_CONTROLS
-
-CONTROLS = load_controls()
-
-def gate(row: dict, conf: float):
-    """
-    Safety gating logic to validate model recommendations against operational limits.
-    Returns: (gate_outcome, rejection_reason, execution_status, fallback_mode, alert_message)
-    """
-    try:
-        dls_normal = float(CONTROLS.get("DLS normal max (deg/100ft)", 2.0))
-        dls_block = float(CONTROLS.get("DLS block max (deg/100ft)", 3.0))
-        vib_max = float(CONTROLS.get("Vibration caution max (g)", 0.5))
-        wob_low = float(CONTROLS.get("WOB low preference (klbf)", 20))
-        wob_high = float(CONTROLS.get("WOB high preference (klbf)", 60))
-        conf_th = float(CONTROLS.get("Confidence threshold", 0.5))
-
-        dls = float(row.get("DLS_deg_per_100ft", 0))
-        vib = float(row.get("Vibration_g", 0))
-        wob = float(row.get("WOB_klbf", 0))
-
-        # Critical conditions (reject immediately)
-        if conf < conf_th:
-            return ("REJECTED", "LOW_CONFIDENCE", "BLOCKED", "HOLD_STEERING", 
-                   f"Confidence {conf:.2f} below threshold {conf_th}")
-
-        if dls > dls_block:
-            return ("REJECTED", "LIMIT_EXCEEDED", "BLOCKED", "HOLD_STEERING", 
-                   f"DLS {dls:.2f} exceeds block limit {dls_block}")
-
-        # Caution conditions (allow with warnings)
-        caution_reasons = []
-        if dls > dls_normal:
-            caution_reasons.append(f"DLS {dls:.2f} in caution zone")
-        if vib > vib_max:
-            caution_reasons.append(f"Vibration {vib:.2f}g exceeds {vib_max}g")
-        if not (wob_low <= wob <= wob_high):
-            caution_reasons.append(f"WOB {wob:.1f} outside {wob_low}-{wob_high} band")
-
-        if caution_reasons:
-            return ("REDUCED", None, "SENT", None, "; ".join(caution_reasons))
-
-        return ("ACCEPTED", None, "SENT", None, "Normal operation")
-    except Exception as e:
-        logger.error(f"Error in gating logic: {str(e)}")
-        return ("REJECTED", "SENSOR_ANOMALY", "BLOCKED", "HOLD_STEERING", f"Gating error: {str(e)}")
-
 class PredictRequest(BaseModel):
-    """Request schema for steering recommendation prediction"""
-    Depth_ft: Optional[float] = None
     WOB_klbf: float
     RPM_demo: float
     ROP_ft_hr: float
-    PHIF: float
-    VSH: float
-    SW: float
-    KLOGH: float
-    Formation_Class: str
+    PHIF: Optional[float] = None
+    VSH: Optional[float] = None
+    SW: Optional[float] = None
+    KLOGH: Optional[float] = None
+    Formation_Class: Optional[str] = None
     Torque_kftlb: float
     Vibration_g: float
     DLS_deg_per_100ft: float
     Inclination_deg: float
     Azimuth_deg: float
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "WOB_klbf": 35.0,
-                "RPM_demo": 110.0,
-                "ROP_ft_hr": 75.0,
-                "PHIF": 0.22,
-                "VSH": 0.32,
-                "SW": 0.42,
-                "KLOGH": 0.52,
-                "Torque_kftlb": 3500.0,
-                "Vibration_g": 0.35,
-                "DLS_deg_per_100ft": 1.8,
-                "Inclination_deg": 50.0,
-                "Azimuth_deg": 105.0,
-                "Formation_Class": "Limestone"
-            }
-        }
+    Depth_ft: Optional[float] = None
+
+class DecisionRecord(BaseModel):
+    timestamp: str
+    model_version: str
+    feature_summary: Dict[str, float]
+    steering_command: str
+    confidence_score: float
+    gate_outcome: Literal["ACCEPTED", "REDUCED", "REJECTED"]
+    rejection_reason: Optional[str]
+    execution_status: str
+    fallback_mode: Optional[str]
+    event_tags: List[str]
+
+class PredictResponse(BaseModel):
+    recommendation: str
+    confidence: float
+    gate_status: Literal["ACCEPTED", "REDUCED", "REJECTED"]
+    alert_message: str
+    decision_record: DecisionRecord
+
+class Limits(BaseModel):
+    confidence_reject_threshold: float
+    confidence_reduce_threshold: float
+    dls_reject_threshold: float
+    dls_reduce_threshold: float
+    vibration_reject_threshold: float
+    vibration_reduce_threshold: float
+    max_vibration_g: float
+    max_dls_deg_100ft: float
+    wob_range: List[float]
+    torque_range: List[float]
+    rpm_range: List[float]
+
+class ConfigResponse(BaseModel):
+    sampling_rate_hz: float
+    limits: Limits
+    units: Dict[str, str]
+
+class TelemetryResponse(BaseModel):
+    timestamp: str
+    depth_ft: float
+    wob_klbf: float
+    torque_kftlb: float
+    rpm: float
+    vibration_g: float
+    inclination_deg: float
+    azimuth_deg: float
+    rop_ft_hr: float
+    dls_deg_100ft: float
+    gamma_gapi: float
+    resistivity_ohm_m: float
+    phif: float
+    vsh: float
+    sw: float
+    klogh: float
+    formation_class: str
+
+class DataQualityResponse(BaseModel):
+    total_rows: int
+    missing_rate_by_column: Dict[str, float]
+    gaps_detected: int
+    outlier_counts: Dict[str, int]
 
 @app.get("/health")
-def health():
-    """Detailed health check endpoint"""
-    uptime_seconds = (datetime.utcnow() - STARTUP_TIME).total_seconds()
-    return {
-        "ok": True,
-        "status": "healthy",
-        "model_loaded": MODEL_LOADED,
-        "uptime_seconds": uptime_seconds,
-        "timestamp": datetime.utcnow().isoformat(),
-    }
+async def health_check():
+    """Health check endpoint"""
+    return {"ok": True}
 
-def get_recommendation(inputs: dict) -> dict:
-    """
-    Get recommendation from the trained model.
-    Falls back to mock prediction if model not available.
-    
-    Args:
-        inputs: Dictionary with feature keys
-    
-    Returns:
-        Dictionary with 'recommendation', 'confidence', and 'all_classes' keys
-    """
-    if not MODEL_LOADED or MODEL is None:
-        logger.warning("Model not loaded, using fallback mock prediction")
-        # Fallback mock prediction based on inputs
-        vibration = float(inputs.get("Vibration_g", 0.5))
-        dls = float(inputs.get("DLS_deg_per_100ft", 1.5))
-        confidence = min(0.95, 0.6 + (1.0 - vibration / 5.0) * 0.2)
-        
-        if vibration > 1.5:
-            rec = "Hold"
-        elif dls > 2.0:
-            rec = "Drop"
+@app.get("/config", response_model=ConfigResponse)
+async def get_config():
+    """Get configuration and limits"""
+    controls = load_controls()
+
+    return ConfigResponse(
+        sampling_rate_hz=1.0,  # Default 1Hz
+        limits={
+            "vibration_max_g": float(controls.get("Vibration caution max (g)", 0.5)),
+            "dls_normal_max": float(controls.get("DLS normal max (deg/100ft)", 2.0)),
+            "dls_block_max": float(controls.get("DLS block max (deg/100ft)", 3.0)),
+            "wob_band_low": float(controls.get("WOB low preference (klbf)", 20)),
+            "wob_band_high": float(controls.get("WOB high preference (klbf)", 60)),
+            "confidence_threshold": float(controls.get("Confidence threshold", 0.5)),
+        },
+        units={
+            "wob": "klbf",
+            "torque": "kft-lb",
+            "rop": "ft/hr",
+            "dls": "deg/100ft",
+            "vibration": "g"
+        }
+    )
+
+@app.get("/telemetry/next", response_model=TelemetryResponse)
+async def get_next_telemetry_endpoint():
+    """Get next telemetry record from dataset"""
+    data = get_next_telemetry()
+    if not data:
+        raise HTTPException(status_code=404, detail="No telemetry data available")
+
+    return TelemetryResponse(**data)
+
+@app.get("/telemetry/quality", response_model=DataQualityResponse)
+async def get_data_quality_endpoint():
+    """Get data quality metrics"""
+    return DataQualityResponse(**get_data_quality())
+
+@app.get("/model/metrics")
+async def get_model_metrics():
+    """Get ML model metrics if available"""
+    if model_available and model_metrics:
+        return model_metrics
+    else:
+        return {"available": False, "message": "Model not trained yet. Run 'python train.py' to train the model."}
+
+def calculate_recommendation(dls: float, inclination: float, vibration: float) -> str:
+    """Rule-based recommendation logic"""
+    if dls > 6:
+        return "Hold"
+    elif inclination > 45:  # Assuming increasing inclination trend
+        return "Drop"
+    else:
+        return "Build"
+
+def calculate_confidence(dls: float, vibration: float, torque: float) -> float:
+    """Calculate confidence based on how far values are from limits"""
+    # Lower confidence near limits
+    confidence = 0.95
+
+    # Reduce confidence based on DLS (higher DLS = lower confidence)
+    if dls > 4:
+        confidence -= (dls - 4) * 0.05
+    if dls > 6:
+        confidence -= (dls - 6) * 0.1
+
+    # Reduce confidence for high vibration
+    if vibration > 2:
+        confidence -= (vibration - 2) * 0.1
+
+    # Reduce confidence for extreme torque
+    if torque > 30000 or torque < 5000:
+        confidence -= 0.1
+
+    return max(0.55, min(0.95, confidence))
+
+def determine_gate_status(confidence: float, dls: float, vibration: float) -> tuple[str, Optional[str]]:
+    """Determine gate status and rejection reason"""
+    if confidence < 0.6 or dls > 8:
+        reason = "LOW_CONFIDENCE" if confidence < 0.6 else "LIMIT_EXCEEDED"
+        return "REJECTED", reason
+    elif dls >= 6 or vibration > 3:
+        return "REDUCED", None
+    else:
+        return "ACCEPTED", None
+
+def determine_gate_status_config(confidence: float, dls: float, vibration: float, limits: Limits) -> tuple[str, Optional[str]]:
+    """Determine gate status using config limits"""
+    if confidence < limits.confidence_reject_threshold or dls > limits.dls_reject_threshold or vibration > limits.vibration_reject_threshold:
+        if confidence < limits.confidence_reject_threshold:
+            reason = "LOW_CONFIDENCE"
+        elif dls > limits.dls_reject_threshold:
+            reason = "DLS_LIMIT_EXCEEDED"
         else:
-            rec = "Build"
-        
-        return {
-            "recommendation": rec,
-            "confidence": confidence,
-            "all_classes": {"Build": 0.3, "Hold": 0.5, "Drop": 0.2}
-        }
-    
-    try:
-        # Create DataFrame with required features in correct order
-        X = pd.DataFrame([inputs])[SCHEMA["cat_cols"] + SCHEMA["num_cols"]]
-        
-        # Get prediction and probability
-        prediction = MODEL.predict(X)[0]
-        probabilities = MODEL.predict_proba(X)[0]
-        confidence = float(probabilities.max())
-        
-        logger.debug(f"Model prediction: {prediction} (confidence: {confidence:.3f})")
-        
-        return {
-            "recommendation": str(prediction),
-            "confidence": confidence,
-            "all_classes": dict(zip(MODEL.classes_, [float(p) for p in probabilities]))
-        }
-    except Exception as e:
-        logger.error(f"Error in model prediction: {str(e)}\n{traceback.format_exc()}")
-        raise
+            reason = "VIBRATION_LIMIT_EXCEEDED"
+        return "REJECTED", reason
+    elif dls >= limits.dls_reduce_threshold or vibration > limits.vibration_reduce_threshold:
+        return "REDUCED", None
+    else:
+        return "ACCEPTED", None
+
+def get_event_tags(dls: float, vibration: float, confidence: float) -> List[str]:
+    """Generate event tags based on conditions"""
+    tags = []
+    if dls > 6:
+        tags.append("high_dls")
+    if vibration > 3:
+        tags.append("high_vibration")
+    if confidence < 0.7:
+        tags.append("low_confidence")
+    return tags
 
 @app.post("/predict")
-def predict(req: PredictRequest):
-    """
-    Get steering recommendation for current telemetry.
-    Includes safety gating and decision records.
-    """
+async def predict(request: PredictRequest) -> PredictResponse:
+    """AI prediction endpoint"""
     try:
-        row = req.model_dump()
-        
-        # Get model recommendation
-        result = get_recommendation(row)
-        rec = result["recommendation"]
-        conf = result["confidence"]
-        
-        logger.info(f"Prediction: {rec} (confidence: {conf:.3f})")
-        
-        # Apply safety gating
-        gate_status, rej_reason, exec_status, fallback_mode, alert_msg = gate(row, conf)
-        
-        # Map gate status to frontend expectations
-        gate_outcome = "ACCEPTED" if gate_status in ("ACCEPTED", "REDUCED") else "REJECTED"
-        event_tags = []
-        if gate_status == "REDUCED":
-            event_tags.append("reduced_mode")
-        
-        # Create decision record
-        decision = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "model_version": "rf-trained-v1",
-            "feature_summary": {
-                "mean_wob": float(row["WOB_klbf"]),
-                "std_wob": 0.0,
-                "mean_torque": float(row["Torque_kftlb"]),
-                "std_torque": 0.0,
-                "mean_rpm": float(row["RPM_demo"]),
-                "std_rpm": 0.0,
-                "mean_vibration": float(row["Vibration_g"]),
-                "std_vibration": 0.0,
-                "trend_inclination": 0.0,
-                "trend_azimuth": 0.0,
-                "instability_proxy": float(row["Vibration_g"] * row["DLS_deg_per_100ft"]),
-            },
-            "steering_command": rec,
-            "confidence_score": float(conf),
-            "gate_outcome": gate_outcome,
-            "rejection_reason": rej_reason,
-            "execution_status": exec_status,
-            "fallback_mode": fallback_mode,
-            "event_tags": event_tags + ([alert_msg] if alert_msg else []),
-        }
-        
-        return {
-            "recommendation": rec,
-            "confidence": float(conf),
-            "gate_status": gate_status,
-            "alert_message": alert_msg,
-            "decision_record": decision,
-        }
-    except Exception as e:
-        logger.error(f"Error in predict endpoint: {str(e)}\n{traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
+        # Get config for thresholds
+        config = await get_config()
 
-@app.post("/batch-predict")
-def batch_predict(requests: List[PredictRequest]):
-    """Batch prediction endpoint for multiple telemetry points"""
-    try:
-        results = []
-        for req in requests:
-            result = predict(req)
-            results.append(result)
-        return {"predictions": results, "count": len(results)}
-    except Exception as e:
-        logger.error(f"Error in batch predict endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Batch prediction error: {str(e)}")
+        # If Depth_ft provided, lookup formation data from dataset
+        if request.Depth_ft is not None:
+            from .dataset import load_dashboard_data
+            df = load_dashboard_data()
+            if not df.empty and "Depth_ft" in df.columns:
+                # Find closest depth
+                closest_idx = (df["Depth_ft"] - request.Depth_ft).abs().idxmin()
+                row = df.loc[closest_idx]
 
-@app.get("/model-info")
-def model_info():
-    """Get information about the loaded model"""
-    try:
-        if MODEL_LOADED and MODEL is not None:
-            clf = MODEL.named_steps.get('clf')
-            classes = list(MODEL.classes_) if hasattr(MODEL, 'classes_') else []
-            
-            return {
-                "model_loaded": True,
-                "model_type": type(clf).__name__ if clf else "Unknown",
-                "classes": classes,
-                "schema": SCHEMA,
-                "controls": CONTROLS,
-            }
+                # Use formation data from dataset if not provided in request
+                request.PHIF = request.PHIF if request.PHIF is not None else float(row.get("PHIF", 0.18))
+                request.VSH = request.VSH if request.VSH is not None else float(row.get("VSH", 0.25))
+                request.SW = request.SW if request.SW is not None else float(row.get("SW", 0.35))
+                request.KLOGH = request.KLOGH if request.KLOGH is not None else float(row.get("KLOGH", 120))
+                request.Formation_Class = request.Formation_Class or str(row.get("Formation_Class", "Sandstone"))
+
+        # Calculate recommendation and confidence
+        if model_available and ml_model is not None:
+            # Use ML model for prediction
+            model_version = "rf-cal-v1"
+
+            # Prepare input data in correct order
+            input_data = pd.DataFrame([{
+                'Formation_Class': request.Formation_Class or 'Sandstone',
+                'WOB_klbf': request.WOB_klbf,
+                'RPM_demo': request.RPM_demo,
+                'ROP_ft_hr': request.ROP_ft_hr,
+                'PHIF': request.PHIF if request.PHIF is not None else 0.18,
+                'VSH': request.VSH if request.VSH is not None else 0.25,
+                'SW': request.SW if request.SW is not None else 0.35,
+                'KLOGH': request.KLOGH if request.KLOGH is not None else 120,
+                'Torque_kftlb': request.Torque_kftlb,
+                'Vibration_g': request.Vibration_g,
+                'DLS_deg_per_100ft': request.DLS_deg_per_100ft,
+                'Inclination_deg': request.Inclination_deg,
+                'Azimuth_deg': request.Azimuth_deg
+            }])
+
+            # Get prediction and probabilities
+            recommendation = ml_model.predict(input_data)[0]
+            probabilities = ml_model.predict_proba(input_data)[0]
+            confidence = float(max(probabilities))  # Max probability as confidence
+
         else:
-            return {
-                "model_loaded": False,
-                "available_classes": ["Build", "Hold", "Drop"],  # Fallback
-                "schema": SCHEMA,
-                "controls": CONTROLS,
-            }
+            # Fallback to rule-based logic
+            model_version = "rules-v1"
+            recommendation = calculate_recommendation(
+                request.DLS_deg_per_100ft,
+                request.Inclination_deg,
+                request.Vibration_g
+            )
+            confidence = calculate_confidence(
+                request.DLS_deg_per_100ft,
+                request.Vibration_g,
+                request.Torque_kftlb
+            )
+
+        # Determine gate status using config limits
+        gate_status, rejection_reason = determine_gate_status_config(
+            confidence,
+            request.DLS_deg_per_100ft,
+            request.Vibration_g,
+            config.limits
+        )
+
+        # Generate alert message
+        if gate_status == "REJECTED":
+            alert_message = f"Recommendation rejected: {rejection_reason}"
+        elif gate_status == "REDUCED":
+            alert_message = "Recommendation accepted with reduced aggressiveness"
+        else:
+            alert_message = "Recommendation accepted"
+
+        # Create decision record
+        decision_record = DecisionRecord(
+            timestamp=datetime.utcnow().isoformat(),
+            model_version=model_version,
+            feature_summary={
+                "WOB_klbf": request.WOB_klbf,
+                "RPM_demo": request.RPM_demo,
+                "ROP_ft_hr": request.ROP_ft_hr,
+                "Torque_kftlb": request.Torque_kftlb,
+                "Vibration_g": request.Vibration_g,
+                "DLS_deg_per_100ft": request.DLS_deg_per_100ft,
+                "Inclination_deg": request.Inclination_deg,
+                "Azimuth_deg": request.Azimuth_deg
+            },
+            steering_command=recommendation,
+            confidence_score=confidence,
+            gate_outcome=gate_status,
+            rejection_reason=rejection_reason,
+            execution_status="BLOCKED" if gate_status == "REJECTED" else "SENT",
+            fallback_mode="HOLD_STEERING" if gate_status == "REJECTED" else None,
+            event_tags=get_event_tags(request.DLS_deg_per_100ft, request.Vibration_g, confidence)
+        )
+
+        # Log prediction
+        log_prediction(
+            logger,
+            timestamp=decision_record.timestamp,
+            recommendation=recommendation,
+            confidence=confidence,
+            gate_status=gate_status,
+            model_or_rules="MODEL" if model_available else "RULES",
+        )
+
+        return PredictResponse(
+            recommendation=recommendation,
+            confidence=confidence,
+            gate_status=gate_status,
+            alert_message=alert_message,
+            decision_record=decision_record
+        )
+
     except Exception as e:
-        logger.error(f"Error getting model info: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Prediction error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
-@app.on_event("startup")
-async def startup_event():
-    """Log server startup"""
-    logger.info("="*60)
-    logger.info("Drilling Insight AI Service Starting")
-    logger.info(f"Model loaded: {MODEL_LOADED}")
-    logger.info(f"Model path: {MODEL_PATH}")
-    logger.info(f"Schema: {len(SCHEMA['num_cols'])} numeric, {len(SCHEMA['cat_cols'])} categorical features")
-    logger.info(f"Controls loaded: {len(CONTROLS)} parameters")
-    logger.info("="*60)
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Log server shutdown"""
-    logger.info("Drilling Insight AI Service Shutting Down")
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

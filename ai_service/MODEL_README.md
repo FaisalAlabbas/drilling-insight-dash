@@ -13,6 +13,7 @@ A multi-class classification model trained on drilling operational data to predi
 ## Model Performance
 
 ### Test Set Metrics
+
 - **Overall Accuracy:** 77.4%
 - **Weighted F1-Score:** 0.74
 - **Weighted Precision:** 0.71
@@ -20,13 +21,13 @@ A multi-class classification model trained on drilling operational data to predi
 
 ### Per-Class Performance
 
-| Class | Precision | Recall | F1-Score | Support |
-|-------|-----------|--------|----------|---------|
-| Build | 0.60 | 1.00 | 0.75 | 3 |
-| Drop | 0.75 | 0.75 | 0.75 | 4 |
-| Hold | 0.82 | 0.86 | 0.84 | 21 |
-| Turn Left | 0.00 | 0.00 | 0.00 | 2 |
-| Turn Right | 0.00 | 0.00 | 0.00 | 1 |
+| Class      | Precision | Recall | F1-Score | Support |
+| ---------- | --------- | ------ | -------- | ------- |
+| Build      | 0.60      | 1.00   | 0.75     | 3       |
+| Drop       | 0.75      | 0.75   | 0.75     | 4       |
+| Hold       | 0.82      | 0.86   | 0.84     | 21      |
+| Turn Left  | 0.00      | 0.00   | 0.00     | 2       |
+| Turn Right | 0.00      | 0.00   | 0.00     | 1       |
 
 **Note:** Classes with 0% recall (Turn Left/Right) had very few test samples. The model performs well on the dominant classes (Build, Hold, Drop).
 
@@ -116,6 +117,7 @@ curl -X POST http://localhost:8000/predict \
 All 13 input features are required:
 
 ### Drilling Parameters
+
 - **WOB_klbf** (float): Weight on Bit in thousands of pounds-force
 - **RPM_demo** (float): Rotations per minute
 - **ROP_ft_hr** (float): Rate of penetration in feet per hour
@@ -123,6 +125,7 @@ All 13 input features are required:
 - **Vibration_g** (float): Vibration magnitude in g-forces
 
 ### Formation Properties
+
 - **PHIF** (float): Porosity index [0-1]
 - **VSH** (float): Shale volume [0-1]
 - **SW** (float): Water saturation [0-1]
@@ -130,6 +133,7 @@ All 13 input features are required:
 - **Formation_Class** (str): Formation type (e.g., "Shale", "Sandstone", "Limestone")
 
 ### Well Geometry
+
 - **DLS_deg_per_100ft** (float): Dogleg severity in degrees per 100 feet
 - **Inclination_deg** (float): Well inclination in degrees
 - **Azimuth_deg** (float): Azimuth direction in degrees
@@ -177,8 +181,8 @@ The `get_recommendation()` function returns:
 ## Data Split Strategy
 
 The model uses **temporal/spatial ordering** for the train-test split (80/20) to avoid data leakage:
+
 - Training samples are sorted by depth and take the first 80% (Depth 0-3800 ft)
 - Test samples are the remaining 20% (Depth 3800+ ft)
 
 This mimics real-world prediction scenarios where the model predicts ahead of drilling progress.
-

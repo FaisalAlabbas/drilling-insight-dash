@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+          cache-dependency-path: drilling-insight-dash/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./drilling-insight-dash
+
+      - name: Run linter
+        run: npm run lint
+        working-directory: ./drilling-insight-dash
+
+      - name: Check formatting
+        run: npm run check:format
+        working-directory: ./drilling-insight-dash
+
+      - name: Run tests
+        run: npm run test
+        working-directory: ./drilling-insight-dash
+
+      - name: Build
+        run: npm run build
+        working-directory: ./drilling-insight-dash
+
+  backend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ai_service/requirements.txt
+
+      - name: Run pytest
+        run: |
+          cd ai_service
+          pytest test_api.py -v --tb=short
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile ai_service/api.py
+          python -m py_compile ai_service/logging_config.py
+          python -m py_compile ai_service/settings.py
+
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run basic security checks
+        run: |
+          echo "Checking for hardcoded secrets..."
+          if grep -r "password=" . --include="*.py" --include="*.ts" --include="*.tsx"; then
+            echo "Warning: Found potential hardcoded secrets"
+          fi
+          if grep -r "api_key=" . --include="*.py" --include="*.ts" --include="*.tsx"; then
+            echo "Warning: Found potential hardcoded API keys"
+          fi

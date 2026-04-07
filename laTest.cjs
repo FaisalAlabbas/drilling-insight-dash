@@ -10,7 +10,7 @@ function simulateTelemetry() {
   return {
     wob: Math.random() * 30,
     rpm: 120 + Math.random() * 10,
-    vibration: Math.random() * 6
+    vibration: Math.random() * 6,
   };
 }
 
@@ -22,7 +22,7 @@ function featureExtraction(data) {
   return {
     wob_norm: data.wob / 30,
     rpm_norm: data.rpm / 150,
-    vibration_norm: data.vibration / 10
+    vibration_norm: data.vibration / 10,
   };
 }
 
@@ -33,7 +33,7 @@ function runInference(features) {
 
   return {
     command: "STEER_RIGHT_2",
-    confidence: 0.89
+    confidence: 0.89,
   };
 }
 
@@ -43,7 +43,7 @@ function safetyGate(prediction) {
   while (performance.now() - start < 6) {}
 
   return {
-    outcome: "ACCEPTED"
+    outcome: "ACCEPTED",
   };
 }
 
@@ -56,7 +56,6 @@ function generateCommand(result) {
 }
 
 for (let i = 1; i <= ITERATIONS; i++) {
-
   const telemetry = simulateTelemetry();
 
   const t0 = performance.now();
@@ -82,26 +81,23 @@ for (let i = 1; i <= ITERATIONS; i++) {
     gatingMs: (t3 - t2).toFixed(2),
     commandGenerationMs: (t4 - t3).toFixed(2),
     totalLatencyMs: totalLatency.toFixed(2),
-    withinTarget: totalLatency <= LATENCY_TARGET
+    withinTarget: totalLatency <= LATENCY_TARGET,
   });
 
   console.log(`Test ${i}: ${totalLatency.toFixed(2)} ms`);
 }
 
-const latencies = results.map(r => parseFloat(r.totalLatencyMs));
+const latencies = results.map((r) => parseFloat(r.totalLatencyMs));
 
-const avgLatency =
-  latencies.reduce((a, b) => a + b, 0) / latencies.length;
+const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
 
 const maxLatency = Math.max(...latencies);
 
 const minLatency = Math.min(...latencies);
 
-const withinTarget =
-  results.filter(r => r.withinTarget).length;
+const withinTarget = results.filter((r) => r.withinTarget).length;
 
-const percent =
-  ((withinTarget / ITERATIONS) * 100)-1.234; // Adjusted for overhead
+const percent = (withinTarget / ITERATIONS) * 100 - 1.234; // Adjusted for overhead
 
 const summary = {
   latencyTargetMs: LATENCY_TARGET,
@@ -109,15 +105,12 @@ const summary = {
   averageLatencyMs: avgLatency.toFixed(2),
   maxLatencyMs: maxLatency.toFixed(2),
   minLatencyMs: minLatency.toFixed(2),
-  withinTargetPercent: percent.toFixed(2) + "%"
+  withinTargetPercent: percent.toFixed(2) + "%",
 };
 
 console.log("\n--- Latency Results ---");
 console.log(summary);
 
-fs.writeFileSync(
-  "latency-results.json",
-  JSON.stringify({ summary, results }, null, 2)
-);
+fs.writeFileSync("latency-results.json", JSON.stringify({ summary, results }, null, 2));
 
 console.log("\nSaved results to latency-results.json");

@@ -1,74 +1,100 @@
-import { useDashboard } from '@/lib/dashboard-context';
-import { useMemo, useState } from 'react';
-import { cn } from '@/lib/utils';
-import { Search, Download, Filter, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import type { DecisionRecord } from '@/lib/types';
+import { useDashboard } from "@/lib/dashboard-context";
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
+import { Search, Download, Filter, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { DecisionRecord } from "@/lib/types";
 
 export function HistoryView() {
-  const { decisions, telemetry, setSelectedDecision, setDrawerOpen, searchQuery, setSearchQuery } = useDashboard();
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'confidence'>('newest');
-  const [filterCommand, setFilterCommand] = useState<string>('ALL');
-  const [filterOutcome, setFilterOutcome] = useState<string>('ALL');
+  const {
+    decisions,
+    telemetry,
+    setSelectedDecision,
+    setDrawerOpen,
+    searchQuery,
+    setSearchQuery,
+  } = useDashboard();
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "confidence">("newest");
+  const [filterCommand, setFilterCommand] = useState<string>("ALL");
+  const [filterOutcome, setFilterOutcome] = useState<string>("ALL");
 
   const filteredDecisions = useMemo(() => {
     let filtered = [...decisions];
 
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(d =>
-        d.steering_command.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        new Date(d.timestamp).toLocaleString().includes(searchQuery)
+      filtered = filtered.filter(
+        (d) =>
+          d.steering_command.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          new Date(d.timestamp).toLocaleString().includes(searchQuery)
       );
     }
 
     // Command filter
-    if (filterCommand !== 'ALL') {
-      filtered = filtered.filter(d => d.steering_command === filterCommand);
+    if (filterCommand !== "ALL") {
+      filtered = filtered.filter((d) => d.steering_command === filterCommand);
     }
 
     // Outcome filter
-    if (filterOutcome !== 'ALL') {
-      filtered = filtered.filter(d => d.gate_outcome === filterOutcome);
+    if (filterOutcome !== "ALL") {
+      filtered = filtered.filter((d) => d.gate_outcome === filterOutcome);
     }
 
     // Sort
     filtered.sort((a, b) => {
       const timeA = new Date(a.timestamp).getTime();
       const timeB = new Date(b.timestamp).getTime();
-      if (sortBy === 'newest') return timeB - timeA;
-      if (sortBy === 'oldest') return timeA - timeB;
+      if (sortBy === "newest") return timeB - timeA;
+      if (sortBy === "oldest") return timeA - timeB;
       return b.confidence_score - a.confidence_score;
     });
 
     return filtered;
   }, [decisions, searchQuery, filterCommand, filterOutcome, sortBy]);
 
-  const commands = Array.from(new Set(decisions.map(d => d.steering_command)));
-  const avgConfidence = decisions.length > 0 
-    ? (decisions.reduce((sum, d) => sum + d.confidence_score, 0) / decisions.length * 100).toFixed(1)
-    : '0';
-  const acceptRate = decisions.length > 0
-    ? ((decisions.filter(d => d.gate_outcome === 'ACCEPTED').length / decisions.length) * 100).toFixed(1)
-    : '0';
+  const commands = Array.from(new Set(decisions.map((d) => d.steering_command)));
+  const avgConfidence =
+    decisions.length > 0
+      ? (
+          (decisions.reduce((sum, d) => sum + d.confidence_score, 0) / decisions.length) *
+          100
+        ).toFixed(1)
+      : "0";
+  const acceptRate =
+    decisions.length > 0
+      ? (
+          (decisions.filter((d) => d.gate_outcome === "ACCEPTED").length /
+            decisions.length) *
+          100
+        ).toFixed(1)
+      : "0";
 
   const exportCSV = () => {
-    const headers = ['Timestamp', 'Steering Command', 'Confidence', 'Gate Outcome', 'Execution Status', 'Rejection Reason'];
-    const rows = filteredDecisions.map(d => [
+    const headers = [
+      "Timestamp",
+      "Steering Command",
+      "Confidence",
+      "Gate Outcome",
+      "Execution Status",
+      "Rejection Reason",
+    ];
+    const rows = filteredDecisions.map((d) => [
       new Date(d.timestamp).toLocaleString(),
       d.steering_command,
-      (d.confidence_score * 100).toFixed(1) + '%',
+      (d.confidence_score * 100).toFixed(1) + "%",
       d.gate_outcome,
       d.execution_status,
-      d.rejection_reason || 'N/A'
+      d.rejection_reason || "N/A",
     ]);
 
-    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `drilling-decisions-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `drilling-decisions-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
   };
 
@@ -77,15 +103,21 @@ export function HistoryView() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-lg p-3">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Decisions</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            Total Decisions
+          </p>
           <p className="text-2xl font-bold mt-1">{decisions.length}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Confidence</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            Avg Confidence
+          </p>
           <p className="text-2xl font-bold mt-1">{avgConfidence}%</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Accept Rate</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            Accept Rate
+          </p>
           <p className="text-2xl font-bold mt-1">{acceptRate}%</p>
         </div>
       </div>
@@ -110,8 +142,10 @@ export function HistoryView() {
             className="bg-muted border border-border rounded px-2 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
           >
             <option value="ALL">All Commands</option>
-            {commands.map(cmd => (
-              <option key={cmd} value={cmd}>{cmd}</option>
+            {commands.map((cmd) => (
+              <option key={cmd} value={cmd}>
+                {cmd}
+              </option>
             ))}
           </select>
 
@@ -127,7 +161,7 @@ export function HistoryView() {
 
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "confidence")}
             className="bg-muted border border-border rounded px-2 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
           >
             <option value="newest">Newest First</option>
@@ -135,12 +169,7 @@ export function HistoryView() {
             <option value="confidence">Highest Confidence</option>
           </select>
 
-          <Button
-            onClick={exportCSV}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
+          <Button onClick={exportCSV} size="sm" variant="outline" className="gap-2">
             <Download className="h-3.5 w-3.5" />
             Export CSV
           </Button>
@@ -164,50 +193,59 @@ export function HistoryView() {
             </thead>
             <tbody className="divide-y divide-border">
               {filteredDecisions.slice(0, 50).map((decision) => (
-                <tr key={decision.timestamp} className="hover:bg-muted/50 transition-colors">
+                <tr
+                  key={decision.timestamp}
+                  className="hover:bg-muted/50 transition-colors"
+                >
                   <td className="px-3 py-2 font-mono text-muted-foreground">
-                    {new Date(decision.timestamp).toLocaleTimeString('en-US', {
+                    {new Date(decision.timestamp).toLocaleTimeString("en-US", {
                       hour12: false,
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit'
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
                     })}
                   </td>
                   <td className="px-3 py-2 font-medium">{decision.steering_command}</td>
                   <td className="px-3 py-2 text-center">
-                    <span className={cn(
-                      "inline-block px-2 py-1 rounded text-[9px] font-bold",
-                      decision.confidence_score >= 0.7
-                        ? "bg-signal-green/20 text-signal-green"
-                        : decision.confidence_score >= 0.5
-                        ? "bg-signal-yellow/20 text-signal-yellow"
-                        : "bg-signal-red/20 text-signal-red"
-                    )}>
+                    <span
+                      className={cn(
+                        "inline-block px-2 py-1 rounded text-[9px] font-bold",
+                        decision.confidence_score >= 0.7
+                          ? "bg-signal-green/20 text-signal-green"
+                          : decision.confidence_score >= 0.5
+                            ? "bg-signal-yellow/20 text-signal-yellow"
+                            : "bg-signal-red/20 text-signal-red"
+                      )}
+                    >
                       {(decision.confidence_score * 100).toFixed(0)}%
                     </span>
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <span className={cn(
-                      "inline-block px-2 py-1 rounded text-[9px] font-bold",
-                      decision.gate_outcome === 'ACCEPTED'
-                        ? "bg-signal-green/20 text-signal-green"
-                        : "bg-signal-red/20 text-signal-red"
-                    )}>
+                    <span
+                      className={cn(
+                        "inline-block px-2 py-1 rounded text-[9px] font-bold",
+                        decision.gate_outcome === "ACCEPTED"
+                          ? "bg-signal-green/20 text-signal-green"
+                          : "bg-signal-red/20 text-signal-red"
+                      )}
+                    >
                       {decision.gate_outcome}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <span className={cn(
-                      "inline-block px-2 py-1 rounded text-[9px] font-bold",
-                      decision.execution_status === 'SENT'
-                        ? "bg-signal-green/20 text-signal-green"
-                        : "bg-signal-red/20 text-signal-red"
-                    )}>
+                    <span
+                      className={cn(
+                        "inline-block px-2 py-1 rounded text-[9px] font-bold",
+                        decision.execution_status === "SENT"
+                          ? "bg-signal-green/20 text-signal-green"
+                          : "bg-signal-red/20 text-signal-red"
+                      )}
+                    >
                       {decision.execution_status}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">
-                    {decision.rejection_reason || '-'}
+                    {decision.rejection_reason || "-"}
                   </td>
                   <td className="px-3 py-2 text-center">
                     <button

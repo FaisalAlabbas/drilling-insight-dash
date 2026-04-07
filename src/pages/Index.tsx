@@ -1,29 +1,32 @@
-import { DashboardProvider, useDashboard } from '@/lib/dashboard-context';
-import { DashboardHeader } from '@/components/DashboardHeader';
-import { DashboardSidebar } from '@/components/DashboardSidebar';
-import { LiveMonitoringView } from '@/components/LiveMonitoringView';
-import { AlertsView } from '@/components/AlertsView';
-import { HistoryView } from '@/components/HistoryView';
-import { ReportingView } from '@/components/ReportingView';
-import { AdminPanel } from '@/components/AdminPanel';
-import { DetailDrawer } from '@/components/DetailDrawer';
+import { DashboardProvider, useDashboard } from "@/lib/dashboard-context";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { LiveMonitoringView } from "@/components/LiveMonitoringView";
+import { AlertsView } from "@/components/AlertsView";
+import { HistoryView } from "@/components/HistoryView";
+import { ReportingView } from "@/components/ReportingView";
+import { AdminPanel } from "@/components/AdminPanel";
+import { DetailDrawer } from "@/components/DetailDrawer";
+import DataQuality from "./DataQuality";
 
 function DashboardContent() {
   const { activeModule, role } = useDashboard();
 
   const renderModule = () => {
     switch (activeModule) {
-      case 'live':
+      case "live":
         return <LiveMonitoringView />;
-      case 'alerts':
+      case "alerts":
         return <AlertsView />;
-      case 'history':
+      case "history":
         return <HistoryView />;
-      case 'reporting':
-        if (role === 'Operator') return null;
+      case "data-quality":
+        return <DataQuality />;
+      case "reporting":
+        if (role === "Operator") return null;
         return <ReportingView />;
-      case 'admin':
-        if (role !== 'Admin') return null;
+      case "admin":
+        if (role !== "Admin") return null;
         return <AdminPanel />;
       default:
         return <LiveMonitoringView />;
@@ -35,9 +38,7 @@ function DashboardContent() {
       <DashboardHeader />
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar />
-        <main className="flex-1 overflow-y-auto p-4">
-          {renderModule()}
-        </main>
+        <main className="flex-1 overflow-y-auto p-4">{renderModule()}</main>
       </div>
       <DetailDrawer />
     </div>

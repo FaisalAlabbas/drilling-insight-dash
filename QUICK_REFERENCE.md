@@ -9,20 +9,22 @@
 ## 📡 API Endpoints Reference
 
 ### Health & Status
+
 ```
 GET /health
   Returns: { ok, status, model_loaded, uptime_seconds, timestamp }
-  
-GET /model-info  
+
+GET /model-info
   Returns: { model_loaded, model_type, classes, schema, controls }
 ```
 
 ### Predictions
+
 ```
 POST /predict
   Input: PredictRequest
   Returns: { recommendation, confidence, gate_status, alert_message, decision_record }
-  
+
 POST /batch-predict
   Input: List[PredictRequest]
   Returns: { predictions: List, count: int }
@@ -68,25 +70,30 @@ drilling-insight-dash/
 ## 🚀 Common Tasks
 
 ### START SERVERS
+
 **Terminal 1 - Backend:**
+
 ```powershell
 cd ai_service
 python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Terminal 2 - Frontend:**
+
 ```powershell
 npm run dev
 # Vite will try 8080, fallback to 8081 if busy
 ```
 
 ### TRAIN MODEL
+
 ```powershell
 cd ai_service
 python train.py
 ```
 
 ### TEST API
+
 ```powershell
 # Health check
 curl http://localhost:8000/health
@@ -100,35 +107,39 @@ Open http://localhost:8000/docs
 ```
 
 ### VIEW DASHBOARD
+
 ```
 http://localhost:8081
 ```
 
 ### CHANGE USER ROLE
+
 Edit `src/lib/dashboard-context.tsx` line 37:
+
 ```typescript
-const [role, setRole] = useState<UserRole>('Engineer');  // Operator, Engineer, or Admin
+const [role, setRole] = useState<UserRole>("Engineer"); // Operator, Engineer, or Admin
 ```
 
 ## 📊 Live Features
 
-| Feature | Update Rate | Source |
-|---------|------------|--------|
-| Telemetry | 1Hz/10Hz | Mock generator (configurable) |
-| Predictions | 5 seconds | Backend API |
-| Alerts | Per prediction | Threshold-based generation |
-| Stats | Real-time | Computed from buffers |
-| Charts | Real-time | Recharts components |
+| Feature     | Update Rate    | Source                        |
+| ----------- | -------------- | ----------------------------- |
+| Telemetry   | 1Hz/10Hz       | Mock generator (configurable) |
+| Predictions | 5 seconds      | Backend API                   |
+| Alerts      | Per prediction | Threshold-based generation    |
+| Stats       | Real-time      | Computed from buffers         |
+| Charts      | Real-time      | Recharts components           |
 
 ## 🔧 Configuration
 
 ### Backend Settings
+
 File: `ai_service/api.py`, lines ~60-80
 
 ```python
 CONTROLS = {
     "DLS normal max (deg/100ft)": 2.0,        # Yellow zone
-    "DLS block max (deg/100ft)": 3.0,         # Red zone  
+    "DLS block max (deg/100ft)": 3.0,         # Red zone
     "Vibration caution max (g)": 0.5,
     "WOB low preference (klbf)": 20,
     "WOB high preference (klbf)": 60,
@@ -137,7 +148,9 @@ CONTROLS = {
 ```
 
 ### Frontend Settings
+
 File: `.env.local`
+
 ```
 VITE_API_URL=http://localhost:8000
 ```
@@ -145,6 +158,7 @@ VITE_API_URL=http://localhost:8000
 ## 🎯 Key Data Flows
 
 ### Real-Time Monitoring Flow
+
 ```
 User Opens Dashboard
         ↓
@@ -166,6 +180,7 @@ Alerts persisted to localStorage
 ```
 
 ### Telemetry → Prediction Flow
+
 ```
 Random telemetry packet generated
         ↓
@@ -193,6 +208,7 @@ Update dashboard + add to history
 ## 📝 Common Response Examples
 
 ### Successful Prediction
+
 ```json
 {
   "recommendation": "Hold",
@@ -210,7 +226,8 @@ Update dashboard + add to history
 }
 ```
 
-### Rejected Prediction  
+### Rejected Prediction
+
 ```json
 {
   "recommendation": "Build",
@@ -231,6 +248,7 @@ Update dashboard + add to history
 ```
 
 ### Health Check
+
 ```json
 {
   "ok": true,
@@ -243,25 +261,27 @@ Update dashboard + add to history
 
 ## 🐛 Troubleshooting Quick Fixes
 
-| Issue | Solution |
-|-------|----------|
-| Backend won't start | `python -m pip install -r ai_service/requirements.txt` |
-| Model not found | `cd ai_service && python train.py` |
-| Port 8000 in use | `netstat -ano \| findstr :8000` to find process |
-| Port 8080 in use | Vite auto-tries 8081, 8082, etc. |
-| API returns 500 error | Check backend logs for error details |
+| Issue                    | Solution                                                     |
+| ------------------------ | ------------------------------------------------------------ |
+| Backend won't start      | `python -m pip install -r ai_service/requirements.txt`       |
+| Model not found          | `cd ai_service && python train.py`                           |
+| Port 8000 in use         | `netstat -ano \| findstr :8000` to find process              |
+| Port 8080 in use         | Vite auto-tries 8081, 8082, etc.                             |
+| API returns 500 error    | Check backend logs for error details                         |
 | Frontend can't reach API | Verify `.env.local` has `VITE_API_URL=http://localhost:8000` |
-| Alerts not persisting | Check browser localStorage (F12 > Application) |
-| Charts not rendering | Clear browser cache, refresh page |
+| Alerts not persisting    | Check browser localStorage (F12 > Application)               |
+| Charts not rendering     | Clear browser cache, refresh page                            |
 
 ## 📚 File Dependencies
 
 **Frontend → Backend:**
+
 - `src/lib/api-service.ts` → `ai_service/api.py:8000`
 - `src/lib/dashboard-context.tsx` → `getRecommendation()` from api-service
 - `src/components/LiveMonitoringView.tsx` → real-time predictions
 
 **Backend → Files:**
+
 - `ai_service/api.py` → `models/recommendation_model.pkl`
 - `train.py` → `models/rss_dashboard_dataset_built_recalc.xlsx`
 - `api.py` → `models/Controls` sheet from Excel
@@ -301,7 +321,7 @@ Per-Class Performance:
 ## 🔗 Useful URLs
 
 - Dashboard: http://localhost:8081
-- Backend Docs: http://localhost:8000/docs  
+- Backend Docs: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
 - Model Info: http://localhost:8000/model-info
 - AI Evaluation: http://localhost:8081/ai-evaluation

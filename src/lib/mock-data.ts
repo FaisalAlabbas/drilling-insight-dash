@@ -1,8 +1,17 @@
 import type {
-  TelemetryPacket, DecisionRecord, AlertEvent, FeatureVector,
-  SteeringCommand, GateOutcome, RejectionReason, FallbackMode,
-  AlertSeverity, RunSummary, UserRecord, OperatingLimits
-} from './types';
+  TelemetryPacket,
+  DecisionRecord,
+  AlertEvent,
+  FeatureVector,
+  SteeringCommand,
+  GateOutcome,
+  RejectionReason,
+  FallbackMode,
+  AlertSeverity,
+  RunSummary,
+  UserRecord,
+  OperatingLimits,
+} from "./types";
 
 // Utility helpers
 const rand = (min: number, max: number) => Math.random() * (max - min) + min;
@@ -43,7 +52,10 @@ export function generateTelemetryPacket(timestamp: Date): TelemetryPacket {
   };
 }
 
-export function generateTelemetrySeries(count: number, intervalMs: number): TelemetryPacket[] {
+export function generateTelemetrySeries(
+  count: number,
+  intervalMs: number
+): TelemetryPacket[] {
   const now = Date.now();
   return Array.from({ length: count }, (_, i) => {
     const ts = new Date(now - (count - 1 - i) * intervalMs);
@@ -58,10 +70,10 @@ function generateFeatureVector(packets: TelemetryPacket[]): FeatureVector {
     return Math.sqrt(arr.reduce((s, v) => s + (v - m) ** 2, 0) / arr.length);
   };
 
-  const wobs = packets.map(p => p.wob_klbf);
-  const torques = packets.map(p => p.torque_kftlb);
-  const rpms = packets.map(p => p.rpm);
-  const vibs = packets.map(p => p.vibration_g);
+  const wobs = packets.map((p) => p.wob_klbf);
+  const torques = packets.map((p) => p.torque_kftlb);
+  const rpms = packets.map((p) => p.rpm);
+  const vibs = packets.map((p) => p.vibration_g);
 
   return {
     mean_wob: Math.round(mean(wobs) * 100) / 100,
@@ -74,35 +86,59 @@ function generateFeatureVector(packets: TelemetryPacket[]): FeatureVector {
     std_vibration: Math.round(std(vibs) * 100) / 100,
     trend_inclination: Math.round(rand(-0.5, 0.5) * 100) / 100,
     trend_azimuth: Math.round(rand(-1, 1) * 100) / 100,
-    instability_proxy: Math.round((std(vibs) * std(rpms)) * 100) / 100,
+    instability_proxy: Math.round(std(vibs) * std(rpms) * 100) / 100,
   };
 }
 
-const COMMANDS: SteeringCommand[] = ['No Change', 'Move Upward', 'Move Downward', 'Turn Left', 'Turn Right'];
-const REJECTION_REASONS: RejectionReason[] = ['LOW_CONFIDENCE', 'MISSING_DATA', 'SENSOR_ANOMALY', 'LIMIT_EXCEEDED'];
-const EVENT_TAGS = ['spike_detected', 'confidence_drop', 'high_vibration', 'dls_warning', 'torque_spike', 'rpm_fluctuation'];
+const COMMANDS: SteeringCommand[] = [
+  "No Change",
+  "Move Upward",
+  "Move Downward",
+  "Turn Left",
+  "Turn Right",
+];
+const REJECTION_REASONS: RejectionReason[] = [
+  "LOW_CONFIDENCE",
+  "MISSING_DATA",
+  "SENSOR_ANOMALY",
+  "LIMIT_EXCEEDED",
+];
+const EVENT_TAGS = [
+  "spike_detected",
+  "confidence_drop",
+  "high_vibration",
+  "dls_warning",
+  "torque_spike",
+  "rpm_fluctuation",
+];
 
-export function generateDecisionRecord(timestamp: Date, packets: TelemetryPacket[]): DecisionRecord {
+export function generateDecisionRecord(
+  timestamp: Date,
+  packets: TelemetryPacket[]
+): DecisionRecord {
   const confidence = Math.round(rand(0.25, 0.98) * 100) / 100;
   const isRejected = confidence < 0.5 || Math.random() < 0.15;
-  const gate_outcome: GateOutcome = isRejected ? 'REJECTED' : 'ACCEPTED';
+  const gate_outcome: GateOutcome = isRejected ? "REJECTED" : "ACCEPTED";
   const rejection_reason: RejectionReason = isRejected ? pick(REJECTION_REASONS) : null;
-  const fallback_mode: FallbackMode = isRejected ? pick(['HOLD_STEERING', 'MANUAL_FALLBACK'] as FallbackMode[]) : null;
+  const fallback_mode: FallbackMode = isRejected
+    ? pick(["HOLD_STEERING", "MANUAL_FALLBACK"] as FallbackMode[])
+    : null;
 
   const tags: string[] = [];
-  if (confidence < 0.5) tags.push('confidence_drop');
-  if (packets.some(p => p.vibration_g > 4.5)) tags.push('spike_detected', 'high_vibration');
+  if (confidence < 0.5) tags.push("confidence_drop");
+  if (packets.some((p) => p.vibration_g > 4.5))
+    tags.push("spike_detected", "high_vibration");
   if (tags.length === 0 && Math.random() < 0.2) tags.push(pick(EVENT_TAGS));
 
   return {
     timestamp: timestamp.toISOString(),
-    model_version: 'edge-ai-rss-v1.3.2',
+    model_version: "edge-ai-rss-v1.3.2",
     feature_summary: generateFeatureVector(packets),
     steering_command: pick(COMMANDS),
     confidence_score: confidence,
     gate_outcome,
     rejection_reason,
-    execution_status: isRejected ? 'BLOCKED' : 'SENT',
+    execution_status: isRejected ? "BLOCKED" : "SENT",
     fallback_mode,
     event_tags: tags,
   };
@@ -117,71 +153,125 @@ export function generateDecisionSeries(count: number): DecisionRecord[] {
   });
 }
 
-const ALERT_TEMPLATES: { title: string; description: string; severity: AlertSeverity; signals: string[]; threshold?: (p: TelemetryPacket, d?: DecisionRecord) => boolean }[] = [
-  { 
-    title: 'Vibration spike detected', 
-    description: 'Lateral vibration exceeded threshold at near-bit sensor',
-    severity: 'CRITICAL', 
-    signals: ['vibration_g', 'rpm'],
-    threshold: (p) => p.vibration_g > 4.5
+const ALERT_TEMPLATES: {
+  title: string;
+  description: string;
+  severity: AlertSeverity;
+  signals: string[];
+  threshold?: (p: TelemetryPacket, d?: DecisionRecord) => boolean;
+}[] = [
+  {
+    title: "Vibration spike detected",
+    description: "Lateral vibration exceeded threshold at near-bit sensor",
+    severity: "CRITICAL",
+    signals: ["vibration_g", "rpm"],
+    threshold: (p) => p.vibration_g > 4.5,
   },
-  { 
-    title: 'Confidence dropped below threshold', 
-    description: 'AI model confidence fell below 0.50 operating minimum',
-    severity: 'WARN', 
-    signals: ['confidence_score'],
-    threshold: (_, d) => d ? d.confidence_score < 0.5 : false
+  {
+    title: "Confidence dropped below threshold",
+    description: "AI model confidence fell below 0.50 operating minimum",
+    severity: "WARN",
+    signals: ["confidence_score"],
+    threshold: (_, d) => (d ? d.confidence_score < 0.5 : false),
   },
-  { 
-    title: 'Gate blocked command: LIMIT_EXCEEDED', 
-    description: 'Safety gate rejected steering command due to DLS exceeding limit',
-    severity: 'CRITICAL', 
-    signals: ['dls_deg_100ft', 'inclination_deg'],
-    threshold: (p) => p.dls_deg_100ft > 6.0
+  {
+    title: "Gate blocked command: LIMIT_EXCEEDED",
+    description: "Safety gate rejected steering command due to DLS exceeding limit",
+    severity: "CRITICAL",
+    signals: ["dls_deg_100ft", "inclination_deg"],
+    threshold: (p) => p.dls_deg_100ft > 6.0,
   },
-  { 
-    title: 'RPM fluctuation detected', 
-    description: 'Rotational speed variance exceeded normal operating band',
-    severity: 'WARN', 
-    signals: ['rpm', 'torque_kftlb'],
-    threshold: (p) => p.rpm > 200 || p.rpm < 60
+  {
+    title: "RPM fluctuation detected",
+    description: "Rotational speed variance exceeded normal operating band",
+    severity: "WARN",
+    signals: ["rpm", "torque_kftlb"],
+    threshold: (p) => p.rpm > 200 || p.rpm < 60,
   },
-  { 
-    title: 'WOB approaching upper limit', 
-    description: 'Weight on bit nearing operational limit',
-    severity: 'WARN', 
-    signals: ['wob_klbf'],
-    threshold: (p) => p.wob_klbf > 28
+  {
+    title: "WOB approaching upper limit",
+    description: "Weight on bit nearing operational limit",
+    severity: "WARN",
+    signals: ["wob_klbf"],
+    threshold: (p) => p.wob_klbf > 28,
   },
-  { 
-    title: 'Torque spike: possible stall', 
-    description: 'Torque spiked with corresponding RPM drop',
-    severity: 'CRITICAL', 
-    signals: ['torque_kftlb', 'rpm'],
-    threshold: (p) => p.torque_kftlb > 15
+  {
+    title: "Torque spike: possible stall",
+    description: "Torque spiked with corresponding RPM drop",
+    severity: "CRITICAL",
+    signals: ["torque_kftlb", "rpm"],
+    threshold: (p) => p.torque_kftlb > 15,
   },
-  { 
-    title: 'DLS warning: approaching limit', 
-    description: 'Dogleg severity approaching operational limit',
-    severity: 'WARN', 
-    signals: ['dls_deg_100ft'],
-    threshold: (p) => p.dls_deg_100ft > 5.5
+  {
+    title: "DLS warning: approaching limit",
+    description: "Dogleg severity approaching operational limit",
+    severity: "WARN",
+    signals: ["dls_deg_100ft"],
+    threshold: (p) => p.dls_deg_100ft > 5.5,
   },
-  { 
-    title: 'ROP degradation detected', 
-    description: 'Rate of penetration dropped significantly',
-    severity: 'INFO', 
-    signals: ['rop_ft_hr', 'wob_klbf'],
-    threshold: (p) => p.rop_ft_hr < 20
+  {
+    title: "ROP degradation detected",
+    description: "Rate of penetration dropped significantly",
+    severity: "INFO",
+    signals: ["rop_ft_hr", "wob_klbf"],
+    threshold: (p) => p.rop_ft_hr < 20,
   },
 ];
 
 /**
  * Generate alerts based on real telemetry and decision data
  */
-export function generateAlertsFromData(packet: TelemetryPacket, decision?: DecisionRecord): AlertEvent[] {
+export function generateAlertsFromData(
+  packet: TelemetryPacket,
+  decision?: DecisionRecord,
+  limits?: OperatingLimits
+): AlertEvent[] {
   const alerts: AlertEvent[] = [];
-  
+
+  // Use config limits if provided, otherwise use defaults
+  const maxVibration = limits?.max_vibration_g ?? OPERATING_LIMITS.max_vibration_g;
+  const maxDls = limits?.max_dls_deg_100ft ?? OPERATING_LIMITS.max_dls_deg_100ft;
+  const wobRange = limits?.wob_range ?? OPERATING_LIMITS.wob_range;
+  const torqueRange = limits?.torque_range ?? OPERATING_LIMITS.torque_range;
+
+  const ALERT_TEMPLATES = [
+    {
+      title: "High vibration detected",
+      description: `Vibration exceeded ${maxVibration}g threshold`,
+      severity: "CRITICAL" as AlertSeverity,
+      signals: ["vibration_g"],
+      threshold: (p: TelemetryPacket) => p.vibration_g > maxVibration,
+    },
+    {
+      title: "WOB approaching upper limit",
+      description: "Weight on bit nearing operational limit",
+      severity: "WARN" as AlertSeverity,
+      signals: ["wob_klbf"],
+      threshold: (p: TelemetryPacket) => p.wob_klbf > wobRange[1] * 0.9,
+    },
+    {
+      title: "Torque spike: possible stall",
+      description: "Torque spiked with corresponding RPM drop",
+      severity: "CRITICAL" as AlertSeverity,
+      signals: ["torque_kftlb", "rpm"],
+      threshold: (p: TelemetryPacket) => p.torque_kftlb > torqueRange[1] * 0.9,
+    },
+    {
+      title: "DLS warning: approaching limit",
+      description: `Dogleg severity approaching ${maxDls}°/100ft limit`,
+      severity: "WARN" as AlertSeverity,
+      signals: ["dls_deg_100ft"],
+      threshold: (p: TelemetryPacket) => p.dls_deg_100ft > maxDls * 0.9,
+    },
+    {
+      title: "ROP degradation detected",
+      description: "Rate of penetration dropped significantly",
+      severity: "INFO" as AlertSeverity,
+      signals: ["rop_ft_hr", "wob_klbf"],
+      threshold: (p: TelemetryPacket) => p.rop_ft_hr < 20,
+    },
+  ];
+
   for (const template of ALERT_TEMPLATES) {
     if (template.threshold && template.threshold(packet, decision)) {
       alerts.push({
@@ -195,14 +285,18 @@ export function generateAlertsFromData(packet: TelemetryPacket, decision?: Decis
       });
     }
   }
-  
+
   return alerts;
 }
 
 /**
  * Create a manual alert
  */
-export function createManualAlert(title: string, description: string, severity: AlertSeverity = 'WARN'): AlertEvent {
+export function createManualAlert(
+  title: string,
+  description: string,
+  severity: AlertSeverity = "WARN"
+): AlertEvent {
   return {
     id: `ALT-MANUAL-${Date.now()}`,
     timestamp: new Date().toISOString(),
@@ -219,11 +313,11 @@ export function generateAlerts(count: number): AlertEvent[] {
   return Array.from({ length: count }, (_, i) => {
     const ts = new Date(now - i * randInt(30000, 180000));
     return {
-      id: `ALT-${String(1000 + i).padStart(4, '0')}`,
+      id: `ALT-${String(1000 + i).padStart(4, "0")}`,
       timestamp: ts.toISOString(),
-      severity: pick(['INFO', 'WARN', 'CRITICAL'] as AlertSeverity[]),
-      title: 'Historical alert',
-      description: 'Past alert from system log',
+      severity: pick(["INFO", "WARN", "CRITICAL"] as AlertSeverity[]),
+      title: "Historical alert",
+      description: "Past alert from system log",
       related_signals: [],
       linked_log_timestamp: ts.toISOString(),
     };
@@ -231,13 +325,21 @@ export function generateAlerts(count: number): AlertEvent[] {
 }
 
 export function generateRunSummaries(): RunSummary[] {
-  const wells = ['Permian-H7', 'Eagle Ford-12', 'Bakken-A3', 'Marcellus-W9', 'Midland-D5'];
+  const wells = [
+    "Permian-H7",
+    "Eagle Ford-12",
+    "Bakken-A3",
+    "Marcellus-W9",
+    "Midland-D5",
+  ];
   return wells.map((well, i) => {
     const decisions = randInt(200, 800);
     const acceptRate = Math.round(rand(0.7, 0.95) * 100) / 100;
     return {
-      id: `RUN-${String(100 + i).padStart(4, '0')}`,
-      date: new Date(Date.now() - i * 86400000 * randInt(1, 5)).toISOString().split('T')[0],
+      id: `RUN-${String(100 + i).padStart(4, "0")}`,
+      date: new Date(Date.now() - i * 86400000 * randInt(1, 5))
+        .toISOString()
+        .split("T")[0],
       well_name: well,
       count_decisions: decisions,
       accept_rate: acceptRate,
@@ -250,10 +352,40 @@ export function generateRunSummaries(): RunSummary[] {
 
 export function generateUsers(): UserRecord[] {
   return [
-    { id: '1', name: 'James Mitchell', email: 'j.mitchell@drillingops.com', role: 'Admin', status: 'Active' },
-    { id: '2', name: 'Sarah Chen', email: 's.chen@drillingops.com', role: 'Engineer', status: 'Active' },
-    { id: '3', name: 'Mike Rodriguez', email: 'm.rodriguez@drillingops.com', role: 'Operator', status: 'Active' },
-    { id: '4', name: 'Emily Watson', email: 'e.watson@drillingops.com', role: 'Engineer', status: 'Active' },
-    { id: '5', name: 'David Park', email: 'd.park@drillingops.com', role: 'Operator', status: 'Inactive' },
+    {
+      id: "1",
+      name: "James Mitchell",
+      email: "j.mitchell@drillingops.com",
+      role: "Admin",
+      status: "Active",
+    },
+    {
+      id: "2",
+      name: "Sarah Chen",
+      email: "s.chen@drillingops.com",
+      role: "Engineer",
+      status: "Active",
+    },
+    {
+      id: "3",
+      name: "Mike Rodriguez",
+      email: "m.rodriguez@drillingops.com",
+      role: "Operator",
+      status: "Active",
+    },
+    {
+      id: "4",
+      name: "Emily Watson",
+      email: "e.watson@drillingops.com",
+      role: "Engineer",
+      status: "Active",
+    },
+    {
+      id: "5",
+      name: "David Park",
+      email: "d.park@drillingops.com",
+      role: "Operator",
+      status: "Inactive",
+    },
   ];
 }

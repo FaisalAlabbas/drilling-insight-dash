@@ -1,13 +1,23 @@
-export type UserRole = 'Operator' | 'Engineer' | 'Admin';
+export type UserRole = "Operator" | "Engineer" | "Admin";
 
-export type SteeringCommand = 'No Change' | 'Move Upward' | 'Move Downward' | 'Turn Left' | 'Turn Right';
-export type GateOutcome = 'ACCEPTED' | 'REJECTED';
-export type RejectionReason = 'LOW_CONFIDENCE' | 'MISSING_DATA' | 'SENSOR_ANOMALY' | 'LIMIT_EXCEEDED' | null;
-export type ExecutionStatus = 'SENT' | 'BLOCKED';
-export type FallbackMode = 'HOLD_STEERING' | 'MANUAL_FALLBACK' | null;
-export type AlertSeverity = 'INFO' | 'WARN' | 'CRITICAL';
-export type EdgeHealth = 'Healthy' | 'Degraded';
-export type SamplingRate = '1Hz' | '10Hz';
+export type SteeringCommand =
+  | "No Change"
+  | "Move Upward"
+  | "Move Downward"
+  | "Turn Left"
+  | "Turn Right";
+export type GateOutcome = "ACCEPTED" | "REDUCED" | "REJECTED";
+export type RejectionReason =
+  | "LOW_CONFIDENCE"
+  | "MISSING_DATA"
+  | "SENSOR_ANOMALY"
+  | "LIMIT_EXCEEDED"
+  | null;
+export type ExecutionStatus = "SENT" | "BLOCKED";
+export type FallbackMode = "HOLD_STEERING" | "MANUAL_FALLBACK" | null;
+export type AlertSeverity = "INFO" | "WARN" | "CRITICAL";
+export type EdgeHealth = "Healthy" | "Degraded";
+export type SamplingRate = "1Hz" | "10Hz";
 
 export interface TelemetryPacket {
   timestamp: string;
@@ -97,5 +107,5 @@ export interface UserRecord {
   name: string;
   email: string;
   role: UserRole;
-  status: 'Active' | 'Inactive';
+  status: "Active" | "Inactive";
 }

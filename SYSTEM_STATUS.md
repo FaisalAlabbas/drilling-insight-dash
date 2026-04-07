@@ -5,6 +5,7 @@
 Timestamp: 2026-04-06 15:51:00 UTC
 
 ### Backend Status
+
 ```
 ✓ API Server: RUNNING
   Location:   http://localhost:8000
@@ -15,13 +16,15 @@ Timestamp: 2026-04-06 15:51:00 UTC
 ```
 
 **Endpoints Available:**
+
 - `POST /predict` - Single prediction
-- `POST /batch-predict` - Batch predictions  
+- `POST /batch-predict` - Batch predictions
 - `GET /health` - Health check
 - `GET /model-info` - Model details
 - `GET /docs` - API Swagger documentation
 
 **Test Command:**
+
 ```powershell
 $body = @{
   WOB_klbf=35
@@ -46,6 +49,7 @@ Invoke-WebRequest -Uri http://localhost:8000/predict `
 ```
 
 ### Frontend Status
+
 ```
 ✓ Development Server: RUNNING
   Location:   http://localhost:8081 (port 8080 was busy)
@@ -54,12 +58,14 @@ Invoke-WebRequest -Uri http://localhost:8000/predict `
 ```
 
 **Available Routes:**
+
 - `/` - Main Dashboard
 - `/ai-evaluation` - AI Model Evaluation
 - `/alerts` - Alert Management
 - `*` - 404 Not Found
 
 ### Model Information
+
 ```
 Model Type:    Random Forest Classifier
 Accuracy:      77.4% on test set
@@ -71,6 +77,7 @@ Testing:       31 samples
 ```
 
 **Top Features by Importance:**
+
 1. PHIF (porosity) - 15.56%
 2. DLS (dogleg severity) - 14.93%
 3. VSH (shale volume) - 12.55%
@@ -78,6 +85,7 @@ Testing:       31 samples
 5. Vibration - 8.63%
 
 ### Safety Gating Rules
+
 ```
 Confidence Threshold:     0.5 (50%)
 DLS Normal Max:           2.0 °/100ft (caution)
@@ -89,6 +97,7 @@ WOB Preferred Range:      20-60 klbf
 ## 🚀 QUICK START COMMANDS
 
 **Terminal 1 - Backend (Already Running)**
+
 ```powershell
 cd ai_service
 python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
@@ -97,6 +106,7 @@ python -m uvicorn ai_service.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Terminal 2 - Frontend (Already Running)**
+
 ```powershell
 npm run dev
 # Open: http://localhost:8081
@@ -105,6 +115,7 @@ npm run dev
 ## 📊 DASHBOARD FEATURES
 
 ### Live Monitoring
+
 ✓ Real-time telemetry streaming (1Hz/10Hz configurable)
 ✓ Live AI recommendations (5-second updates)
 ✓ Confidence scoring and gate status
@@ -112,6 +123,7 @@ npm run dev
 ✓ Interactive charts and metrics
 
 ### Alert System
+
 ✓ Threshold-based alert generation
 ✓ Severity levels: CRITICAL, WARN, INFO
 ✓ Read/unread tracking with localStorage persistence
@@ -120,6 +132,7 @@ npm run dev
 ✓ CSV export support
 
 ### Run History & Audit
+
 ✓ Complete decision records (120+ decisions maintained)
 ✓ Advanced filtering (command, gate outcome, confidence)
 ✓ Sorting (newest, oldest, highest confidence)
@@ -128,6 +141,7 @@ npm run dev
 ✓ Per-decision details drawer
 
 ### Reporting & Analytics
+
 ✓ Performance reports (confidence trends, command distribution)
 ✓ Safety analysis (rejection reasons, alert statistics)
 ✓ Operations monitoring (uptime, latency, data quality)
@@ -135,6 +149,7 @@ npm run dev
 ✓ Multi-tab interface (Performance, Safety, Operations)
 
 ### Admin Panel
+
 ✓ User management (4 sample users with roles)
 ✓ System health monitoring (uptime, API latency, error rates)
 ✓ Configuration management (read-only in demo)
@@ -142,6 +157,7 @@ npm run dev
 ✓ System status indicators
 
 ### AI Evaluation
+
 ✓ Model performance metrics
 ✓ Feature importance rankings
 ✓ Per-class precision/recall/F1
@@ -151,19 +167,20 @@ npm run dev
 
 ## 🔐 ROLE-BASED ACCESS
 
-| Feature | Operator | Engineer | Admin |
-|---------|----------|----------|-------|
-| Live Monitoring | ✓ | ✓ | ✓ |
-| Alerts & Notifications | ✓ | ✓ | ✓ |
-| Run History | ✓ | ✓ | ✓ |
-| AI Evaluation | ✗ | ✓ | ✓ |
-| Reporting & Analytics | ✗ | ✓ | ✓ |
-| Admin Panel | ✗ | ✗ | ✓ |
+| Feature                | Operator | Engineer | Admin |
+| ---------------------- | -------- | -------- | ----- |
+| Live Monitoring        | ✓        | ✓        | ✓     |
+| Alerts & Notifications | ✓        | ✓        | ✓     |
+| Run History            | ✓        | ✓        | ✓     |
+| AI Evaluation          | ✗        | ✓        | ✓     |
+| Reporting & Analytics  | ✗        | ✓        | ✓     |
+| Admin Panel            | ✗        | ✗        | ✓     |
 
 **To Test Different Roles:**
 Edit `src/lib/dashboard-context.tsx` line 37:
+
 ```typescript
-const [role, setRole] = useState<UserRole>('Operator'); // or 'Engineer', 'Admin'
+const [role, setRole] = useState<UserRole>("Operator"); // or 'Engineer', 'Admin'
 ```
 
 ## 🔄 REAL-TIME ARCHITECTURE
@@ -207,6 +224,7 @@ const [role, setRole] = useState<UserRole>('Operator'); // or 'Engineer', 'Admin
 ## 📈 PERFORMANCE METRICS
 
 Current Observed:
+
 - Backend Response Time: ~50-100ms
 - Model Prediction Latency: ~5-10ms
 - API Health Check: <5ms
@@ -216,6 +234,7 @@ Current Observed:
 ## 🔍 TESTING THE SYSTEM
 
 ### Test 1: Basic Prediction
+
 ```bash
 curl -X POST http://localhost:8000/predict \
   -H "Content-Type: application/json" \
@@ -237,34 +256,40 @@ curl -X POST http://localhost:8000/predict \
 ```
 
 ### Test 2: Health Check
+
 ```bash
 curl http://localhost:8000/health
 ```
 
 ### Test 3: Model Info
+
 ```bash
 curl http://localhost:8000/model-info
 ```
 
 ### Test 4: API Docs
+
 Open: http://localhost:8000/docs
 
 ## 🐛 DEBUGGING
 
 ### Check Backend Logs
+
 ```powershell
 # Terminal 1 output shows all API activity
 # Look for ERROR or WARN lines
 ```
 
 ### Check Frontend Console
+
 ```javascript
 // Open browser DevTools (F12)
-console.log(localStorage.getItem('drilling_alerts'))
-sessionStorage  // Check session data
+console.log(localStorage.getItem("drilling_alerts"));
+sessionStorage; // Check session data
 ```
 
 ### Monitor Telemetry
+
 ```javascript
 // In browser console
 // Alerts update status
@@ -303,6 +328,7 @@ sessionStorage  // Check session data
 ## 🎉 SUCCESS!
 
 The Drilling Insight Dashboard is now:
+
 - ✅ Fully functional
 - ✅ Real-time operational
 - ✅ AI-powered recommendations
@@ -314,6 +340,7 @@ The Drilling Insight Dashboard is now:
 **Enjoy monitoring real-time drilling operations!** 🛢️
 
 ---
+
 Generated: 2026-04-06 15:51:00 UTC
 Backend: Python FastAPI + scikit-learn
 Frontend: React 18 + TypeScript + Vite

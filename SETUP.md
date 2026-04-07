@@ -5,18 +5,20 @@ A real-time AI-powered drilling operations monitoring dashboard with machine lea
 ## 📋 Prerequisites
 
 - **Python 3.8+** - Download from [python.org](https://www.python.org/downloads/)
-- **Node.js 18+** (or Bun) - For frontend development
+- **Node.js 18+** - For frontend development
 - **pip** - Python package manager (comes with Python)
 
 ## 🚀 Quick Start (Windows PowerShell)
 
 ### Option 1: One-Click Startup (Easiest)
+
 ```powershell
 # Run the startup script (opens both servers automatically)
 .\startup.ps1
 ```
 
 This will:
+
 1. ✓ Install Python dependencies
 2. ✓ Train ML model (if needed)
 3. ✓ Configure frontend
@@ -27,6 +29,7 @@ This will:
 ### Option 2: Manual Setup
 
 **Terminal 1 - Backend (FastAPI)**
+
 ```powershell
 cd ai_service
 python -m pip install -r requirements.txt
@@ -35,6 +38,7 @@ python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Terminal 2 - Frontend (React)**
+
 ```powershell
 npm install                  # Only needed first time
 npm run dev
@@ -45,6 +49,7 @@ Then open your browser to **http://localhost:8080**
 ## 🛑 Troubleshooting
 
 ### Backend won't start
+
 ```powershell
 # Check Python version
 python --version
@@ -58,6 +63,7 @@ netstat -ano | findstr :8000
 ```
 
 ### Model not found
+
 ```powershell
 # Train the model manually
 cd ai_service
@@ -68,6 +74,7 @@ ls models/recommendation_model.pkl
 ```
 
 ### Frontend won't start
+
 ```powershell
 # Clear cache and reinstall
 rm -r node_modules
@@ -76,6 +83,7 @@ npm run dev
 ```
 
 ### API connection error
+
 ```powershell
 # 1. Verify backend is running on port 8000
 curl http://localhost:8000/health
@@ -90,6 +98,7 @@ cat .env.local
 ## 📊 System Overview
 
 ### Backend (Python/FastAPI)
+
 - **Location**: `ai_service/api.py`
 - **Port**: http://localhost:8000
 - **Endpoints**:
@@ -100,6 +109,7 @@ cat .env.local
   - `GET /docs` - API documentation (Swagger UI)
 
 ### Frontend (React/TypeScript/Vite)
+
 - **Location**: `src/pages/Index.tsx`
 - **Port**: http://localhost:8080
 - **Modules**:
@@ -111,14 +121,14 @@ cat .env.local
 
 ## 🔑 Role-Based Access
 
-| Feature | Operator | Engineer | Admin |
-|---------|----------|----------|-------|
-| Live Monitoring | ✓ | ✓ | ✓ |
-| Alerts | ✓ | ✓ | ✓ |
-| Run History | ✓ | ✓ | ✓ |
-| Reporting | ✗ | ✓ | ✓ |
-| AI Evaluation | ✗ | ✓ | ✓ |
-| Admin Panel | ✗ | ✗ | ✓ |
+| Feature         | Operator | Engineer | Admin |
+| --------------- | -------- | -------- | ----- |
+| Live Monitoring | ✓        | ✓        | ✓     |
+| Alerts          | ✓        | ✓        | ✓     |
+| Run History     | ✓        | ✓        | ✓     |
+| Reporting       | ✗        | ✓        | ✓     |
+| AI Evaluation   | ✗        | ✓        | ✓     |
+| Admin Panel     | ✗        | ✗        | ✓     |
 
 ## 📡 Real-Time Features
 
@@ -145,23 +155,27 @@ Model   Gating  Logging
 ## 🎯 Key Capabilities
 
 ✅ **ML Model**: Random Forest classifier (77.4% accuracy)
+
 - 5 steering command classes: Build, Hold, Drop, Turn Left, Turn Right
 - 13 input features (geological + operational telemetry)
 - Real-time confidence scoring
 
 ✅ **Safety Gating**: Multi-layer validation
+
 - Confidence threshold (50%)
 - DLS (Dogleg Severity) limits
 - Vibration thresholds
 - WOB (Weight on Bit) constraints
 
 ✅ **Alert System**: Intelligent notifications
+
 - Threshold-based generation
 - Severity levels: CRITICAL, WARN, INFO
 - Read/unread tracking
 - Persistent history
 
 ✅ **Analytics**: Comprehensive reporting
+
 - Performance metrics (confidence, acceptance rate)
 - Safety analysis (rejections, alerts)
 - Operations monitoring (uptime, latency, data quality)
@@ -169,6 +183,7 @@ Model   Gating  Logging
 ## 🔧 Configuration
 
 ### Backend Settings (`ai_service/api.py`)
+
 ```python
 CONTROLS = {
     "DLS normal max (deg/100ft)": 2.0,        # Caution threshold
@@ -181,8 +196,9 @@ CONTROLS = {
 ```
 
 ### Frontend Settings (`src/lib/api-service.ts`)
+
 ```typescript
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 ```
 
 ## 📈 Performance Targets
@@ -196,20 +212,23 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 ## 🐛 Debug Mode
 
 ### Backend Logging
+
 ```powershell
 # Run with detailed logging
 python -m uvicorn api:app --reload --log-level debug
 ```
 
 ### Frontend Console
+
 ```javascript
 // Check in browser DevTools Console
-localStorage.getItem('drilling_alerts')  // View saved alerts
+localStorage.getItem("drilling_alerts"); // View saved alerts
 ```
 
 ## 📚 API Response Examples
 
 ### Prediction Response
+
 ```json
 {
   "recommendation": "Hold",
@@ -227,6 +246,7 @@ localStorage.getItem('drilling_alerts')  // View saved alerts
 ```
 
 ### Health Check Response
+
 ```json
 {
   "ok": true,
@@ -262,6 +282,7 @@ For production, consider:
 ## 📞 Support
 
 For issues or questions:
+
 1. Check the **Troubleshooting** section above
 2. Review backend logs: `http://localhost:8000/docs`
 3. Check browser console for frontend errors

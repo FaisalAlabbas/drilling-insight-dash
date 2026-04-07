@@ -1,18 +1,35 @@
-import { Activity, Bell, History, FileBarChart, Shield, Menu, X } from 'lucide-react';
-import { useDashboard } from '@/lib/dashboard-context';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import {
+  Activity,
+  Bell,
+  History,
+  FileBarChart,
+  Shield,
+  Menu,
+  X,
+  BarChart3,
+} from "lucide-react";
+import { useDashboard } from "@/lib/dashboard-context";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { UserRole } from "@/lib/types";
 
 const modules = [
-  { id: 'live' as const, label: 'Live Monitoring', icon: Activity },
-  { id: 'alerts' as const, label: 'Alerts', icon: Bell },
-  { id: 'history' as const, label: 'Run History', icon: History },
-  { id: 'reporting' as const, label: 'Reporting', icon: FileBarChart, roles: ['Engineer', 'Admin'] as const },
-  { id: 'admin' as const, label: 'Admin', icon: Shield, roles: ['Admin'] as const },
+  { id: "live" as const, label: "Live Monitoring", icon: Activity },
+  { id: "alerts" as const, label: "Alerts", icon: Bell },
+  { id: "history" as const, label: "Run History", icon: History },
+  { id: "data-quality" as const, label: "Data Quality", icon: BarChart3 },
+  {
+    id: "reporting" as const,
+    label: "Reporting",
+    icon: FileBarChart,
+    roles: ["Engineer", "Admin"] as const,
+  },
+  { id: "admin" as const, label: "Admin", icon: Shield, roles: ["Admin"] as const },
 ];
 
 export function DashboardSidebar() {
-  const { activeModule, setActiveModule, role, alerts, unreadAlertCount } = useDashboard();
+  const { activeModule, setActiveModule, role, alerts, unreadAlertCount } =
+    useDashboard();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -25,18 +42,24 @@ export function DashboardSidebar() {
         {collapsed ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
       </button>
 
-      <aside className={cn(
-        "bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 transition-all duration-200",
-        "fixed md:relative z-40 h-full md:h-auto",
-        collapsed ? "w-56 translate-x-0" : "w-0 -translate-x-full md:w-56 md:translate-x-0"
-      )}>
+      <aside
+        className={cn(
+          "bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 transition-all duration-200",
+          "fixed md:relative z-40 h-full md:h-auto",
+          collapsed
+            ? "w-56 translate-x-0"
+            : "w-0 -translate-x-full md:w-56 md:translate-x-0"
+        )}
+      >
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
               <Activity className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-sidebar-accent-foreground">RSS Monitor</p>
+              <p className="text-xs font-semibold text-sidebar-accent-foreground">
+                RSS Monitor
+              </p>
               <p className="text-[10px] text-sidebar-foreground">v1.3.2</p>
             </div>
           </div>
@@ -44,7 +67,7 @@ export function DashboardSidebar() {
 
         <nav className="flex-1 p-2 space-y-0.5">
           {modules.map((mod) => {
-            if (mod.roles && !mod.roles.includes(role as any)) return null;
+            if (mod.roles && !(mod.roles as UserRole[]).includes(role)) return null;
             const isActive = activeModule === mod.id;
             return (
               <button
@@ -62,7 +85,7 @@ export function DashboardSidebar() {
               >
                 <mod.icon className={cn("h-4 w-4", isActive && "text-primary")} />
                 <span className="truncate">{mod.label}</span>
-                {mod.id === 'alerts' && unreadAlertCount > 0 && (
+                {mod.id === "alerts" && unreadAlertCount > 0 && (
                   <span className="ml-auto text-[10px] font-bold bg-signal-red/20 text-signal-red px-1.5 py-0.5 rounded-full">
                     {unreadAlertCount}
                   </span>
@@ -74,8 +97,18 @@ export function DashboardSidebar() {
 
         <div className="p-3 border-t border-sidebar-border">
           <div className="text-[10px] text-sidebar-foreground space-y-1">
-            <p>Well: <span className="text-sidebar-accent-foreground font-medium">Permian-H7</span></p>
-            <p>Depth: <span className="text-sidebar-accent-foreground font-mono">12,847 ft MD</span></p>
+            <p>
+              Well:{" "}
+              <span className="text-sidebar-accent-foreground font-medium">
+                Permian-H7
+              </span>
+            </p>
+            <p>
+              Depth:{" "}
+              <span className="text-sidebar-accent-foreground font-mono">
+                12,847 ft MD
+              </span>
+            </p>
           </div>
         </div>
       </aside>
