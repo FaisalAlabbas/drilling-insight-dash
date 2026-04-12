@@ -36,9 +36,11 @@ export function generateTelemetryPacket(timestamp: Date): TelemetryPacket {
   azimuthDrift = ((azimuthDrift % 360) + 360) % 360;
 
   const vibration = Math.random() < 0.05 ? rand(4.5, 6.5) : rand(0.2, 3.5);
+  const formationTypes = ["sandstone", "shale", "limestone", "dolomite", "chalk"];
 
   return {
     timestamp: timestamp.toISOString(),
+    depth_ft: Math.round(rand(8000, 15000)),
     wob_klbf: Math.round(rand(8, 30) * 10) / 10,
     torque_kftlb: Math.round(rand(4, 16) * 10) / 10,
     rpm: randInt(80, 200),
@@ -49,6 +51,11 @@ export function generateTelemetryPacket(timestamp: Date): TelemetryPacket {
     dls_deg_100ft: Math.round(rand(0.5, 7) * 100) / 100,
     gamma_gapi: Math.round(rand(30, 150) * 10) / 10,
     resistivity_ohm_m: Math.round(rand(0.2, 120) * 10) / 10,
+    phif: Math.round(rand(0.1, 0.5) * 100) / 100,
+    vsh: Math.round(rand(0.1, 0.8) * 100) / 100,
+    sw: Math.round(rand(0.1, 1.0) * 100) / 100,
+    klogh: Math.round(rand(0.3, 1.0) * 100) / 100,
+    formation_class: formationTypes[Math.floor(Math.random() * formationTypes.length)],
   };
 }
 
@@ -295,7 +302,7 @@ export function generateAlertsFromData(
 export function createManualAlert(
   title: string,
   description: string,
-  severity: AlertSeverity = "WARN"
+  severity: AlertSeverity = "medium"
 ): AlertEvent {
   return {
     id: `ALT-MANUAL-${Date.now()}`,

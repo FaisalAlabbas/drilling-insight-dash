@@ -53,13 +53,18 @@ export function AIEvaluation() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  // Per-class performance
-  const classMetrics = [
-    { class: "Build", precision: 0.6, recall: 1.0, f1: 0.75, support: 3 },
-    { class: "Drop", precision: 0.75, recall: 0.75, f1: 0.75, support: 4 },
-    { class: "Hold", precision: 0.82, recall: 0.86, f1: 0.84, support: 21 },
-    { class: "Turn Left", precision: 0.0, recall: 0.0, f1: 0.0, support: 2 },
-    { class: "Turn Right", precision: 0.0, recall: 0.0, f1: 0.0, support: 1 },
+  // Per-class performance from API
+  const classMetrics = modelMetrics?.per_class_f1 ? 
+    Object.entries(modelMetrics.per_class_f1).map(([className, f1]) => ({
+      class: className,
+      f1: typeof f1 === 'number' ? f1 : 0,
+      support: className === 'Build' ? 3 : className === 'Drop' ? 4 : className === 'Hold' ? 21 : className === 'Turn Left' ? 2 : 1
+    })) : [
+    { class: "Build", f1: 0.75, support: 3 },
+    { class: "Drop", f1: 0.86, support: 4 },
+    { class: "Hold", f1: 0.86, support: 21 },
+    { class: "Turn Left", f1: 0.0, support: 2 },
+    { class: "Turn Right", f1: 0.0, support: 1 },
   ];
 
   // Feature importance data for chart (placeholder - not provided by backend)
@@ -71,7 +76,7 @@ export function AIEvaluation() {
     { name: "Vibration", importance: "8.63" },
   ];
 
-  // Class distribution
+  // Class distribution (placeholder - using training data distribution)
   const classDistribution = [
     { name: "Build", value: 75, fill: "#10b981" },
     { name: "Hold", value: 43, fill: "#f59e0b" },
@@ -199,7 +204,7 @@ export function AIEvaluation() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {modelMetrics.target_classes?.length || "N/A"}
+                    {modelMetrics.per_class_f1 ? Object.keys(modelMetrics.per_class_f1).length : "N/A"}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Steering commands</p>
                 </CardContent>
@@ -227,15 +232,15 @@ export function AIEvaluation() {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Precision</p>
+                        <p className="text-sm text-muted-foreground">Accuracy</p>
                         <p className="text-lg font-semibold">
-                          {modelMetrics.precision.toFixed(2)}
+                          {modelMetrics.accuracy ? (modelMetrics.accuracy * 100).toFixed(1) + "%" : "N/A"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Recall</p>
+                        <p className="text-sm text-muted-foreground">Macro F1</p>
                         <p className="text-lg font-semibold">
-                          {modelMetrics.recall.toFixed(2)}
+                          {modelMetrics.macro_f1 ? modelMetrics.macro_f1.toFixed(3) : "N/A"}
                         </p>
                       </div>
                       <div>

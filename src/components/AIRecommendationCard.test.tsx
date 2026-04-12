@@ -21,11 +21,11 @@ const mockDecision: DecisionRecord = {
     trend_azimuth: 0.2,
     instability_proxy: 0.3,
   },
-  steering_command: "Build",
+  steering_command: "Move Upward" as const,
   confidence_score: 0.85,
   gate_outcome: "ACCEPTED" as const,
   rejection_reason: null,
-  execution_status: "SENT" as const,
+  execution_status: "SENT",
   fallback_mode: null,
   event_tags: [],
 };
@@ -37,15 +37,7 @@ describe("AIRecommendationCard", () => {
       edgeHealth: "Healthy",
       addAlert: vi.fn(),
       telemetry: [],
-      limits: {
-        max_vibration_g: 2,
-        max_dls_deg_100ft: 3,
-        wob_range: [0, 100],
-        torque_range: [0, 200],
-        rpm_range: [0, 300],
-      },
-      modelMetrics: null,
-      metricsLoading: false,
+      alerts: [],
     };
     vi.spyOn(DashboardContext, "useDashboard").mockReturnValue(
       mockContext as DashboardContextType
@@ -70,15 +62,7 @@ describe("AIRecommendationCard", () => {
       edgeHealth: "Healthy",
       addAlert: vi.fn(),
       telemetry: [],
-      limits: {
-        max_vibration_g: 2,
-        max_dls_deg_100ft: 3,
-        wob_range: [0, 100],
-        torque_range: [0, 200],
-        rpm_range: [0, 300],
-      },
-      modelMetrics: null,
-      metricsLoading: false,
+      alerts: [],
     };
     vi.spyOn(DashboardContext, "useDashboard").mockReturnValue(
       mockContext as DashboardContextType
@@ -102,15 +86,7 @@ describe("AIRecommendationCard", () => {
       edgeHealth: "Healthy",
       addAlert: vi.fn(),
       telemetry: [],
-      limits: {
-        max_vibration_g: 2,
-        max_dls_deg_100ft: 3,
-        wob_range: [0, 100],
-        torque_range: [0, 200],
-        rpm_range: [0, 300],
-      },
-      modelMetrics: null,
-      metricsLoading: false,
+      alerts: [],
     };
     vi.spyOn(DashboardContext, "useDashboard").mockReturnValue(
       mockContext as DashboardContextType
@@ -139,15 +115,7 @@ describe("AIRecommendationCard", () => {
       edgeHealth: "Healthy",
       addAlert: vi.fn(),
       telemetry: [],
-      limits: {
-        max_vibration_g: 2,
-        max_dls_deg_100ft: 3,
-        wob_range: [0, 100],
-        torque_range: [0, 200],
-        rpm_range: [0, 300],
-      },
-      modelMetrics: null,
-      metricsLoading: false,
+      alerts: [],
     };
     vi.spyOn(DashboardContext, "useDashboard").mockReturnValue(
       mockContext as DashboardContextType
@@ -159,7 +127,7 @@ describe("AIRecommendationCard", () => {
 
   it("renders steering command", () => {
     render(<AIRecommendationCard />);
-    expect(screen.getByText("Build")).toBeInTheDocument();
+    expect(screen.getByText("Move Upward")).toBeInTheDocument();
   });
 
   it("returns null when no decisions exist", () => {
@@ -168,15 +136,7 @@ describe("AIRecommendationCard", () => {
       edgeHealth: "Healthy",
       addAlert: vi.fn(),
       telemetry: [],
-      limits: {
-        max_vibration_g: 2,
-        max_dls_deg_100ft: 3,
-        wob_range: [0, 100],
-        torque_range: [0, 200],
-        rpm_range: [0, 300],
-      },
-      modelMetrics: null,
-      metricsLoading: false,
+      alerts: [],
     };
     vi.spyOn(DashboardContext, "useDashboard").mockReturnValue(
       mockContext as DashboardContextType

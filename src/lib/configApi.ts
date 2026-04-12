@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { ConfigResponse } from "./types";
+import type { ConfigResponse } from "./api-types";
+import { ConfigResponseSchema } from "./zod-schemas";
 
-const API_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8001";
 
 export const getConfig = async (): Promise<ConfigResponse> => {
   const response = await fetch(`${API_BASE_URL}/config`);
   if (!response.ok) {
     throw new Error("Failed to fetch config");
   }
-  return response.json();
+  const json = await response.json();
+  return ConfigResponseSchema.parse(json);
 };
 
 export const useConfig = () => {

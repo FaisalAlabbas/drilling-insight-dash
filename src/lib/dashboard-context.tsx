@@ -7,13 +7,11 @@ import React, {
   useRef,
 } from "react";
 import type {
-  UserRole,
-  EdgeHealth,
-  SamplingRate,
   TelemetryPacket,
   DecisionRecord,
   AlertEvent,
-} from "./types";
+  AlertSeverity,
+} from "./api-types";
 import {
   generateTelemetrySeries,
   generateDecisionSeries,
@@ -25,33 +23,31 @@ import {
 } from "./mock-data";
 import { getRecommendation, checkBackendHealth } from "./api-service";
 import { useConfig } from "./configApi";
+import { DASHBOARD_MODULES, getAccessibleModules, hasAccess, type ModuleId } from "./dashboard-modules";
+import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 
-type SidebarModule =
-  | "live"
-  | "alerts"
-  | "history"
-  | "data-quality"
-  | "reporting"
-  | "admin";
+type SidebarModule = ModuleId;
 
-interface DashboardContextType {
-  role: UserRole;
-  setRole: (r: UserRole) => void;
-  edgeHealth: EdgeHealth;
-  setEdgeHealth: (h: EdgeHealth) => void;
+export interface DashboardContextType {
+  role: string;
+  setRole: (r: string) => void;
+  edgeHealth: "Healthy" | "Degraded";
+  setEdgeHealth: (h: "Healthy" | "Degraded") => void;
   activeModule: SidebarModule;
   setActiveModule: (m: SidebarModule) => void;
-  samplingRate: SamplingRate;
-  setSamplingRate: (r: SamplingRate) => void;
+  samplingRate: string;
+  setSamplingRate: (r: string) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   telemetry: TelemetryPacket[];
   decisions: DecisionRecord[];
   alerts: AlertEvent[];
+  accessibleModules: typeof DASHBOARD_MODULES;
+  hasModuleAccess: (moduleId: ModuleId) => boolean;
   addAlert: (
     title: string,
     description: string,
-    severity?: "INFO" | "WARN" | "CRITICAL"
+    severity?: AlertSeverity
   ) => void;
   markAlertsAsRead: () => void;
   unreadAlertCount: number;
@@ -110,7 +106,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     (
       title: string,
       description: string,
-      severity: "INFO" | "WARN" | "CRITICAL" = "WARN"
+      severity: AlertSeverity = "medium"
     ) => {
       const newAlert = createManualAlert(title, description, severity);
       setAlerts((prev) => [newAlert, ...prev].slice(0, 100)); // Keep last 100 alerts
@@ -138,16 +134,49 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     checkBackendHealth().then(setBackendAvailable);
   }, []);
 
-  // Auto-stream telemetry from backend or mock
+  // Stream telemetry via WebSocket with fallback to mock generation
+  const {
+    telemetry: wstelemetry,
+    connected: wsConnected,
+    error: wsError,
+  } = useTelemetryStream({
+    maxBufferSize: 300,
+    onError: (error) => {
+      console.error("WebSocket telemetry stream error:", error);
+      // Will fallback to polling
+    },
+  });
+
+  // Initialize telemetry with WebSocket data or mock
+  const [telemetrySourceIsWebSocket, setTelemetrySourceIsWebSocket] = useState(
+    false
+  );
+
+  // Integrate WebSocket telemetry into state
+  useEffect(() => {
+    if (wstelemetry.length > 0) {
+      setTelemetry(wstelemetry);
+      setTelemetrySourceIsWebSocket(true);
+    }
+  }, [wstelemetry]);
+
+  // Auto-stream telemetry from backend polling as fallback or mock
   const telemetryRef = useRef(telemetry);
   telemetryRef.current = telemetry;
 
+  // Polling fallback when WebSocket is not connected
   useEffect(() => {
+    // Skip polling if WebSocket is connected and has data
+    if (telemetrySourceIsWebSocket && wsConnected && wstelemetry.length > 0) {
+      return;
+    }
+
     const interval = setInterval(
       async () => {
-        if (backendAvailable) {
+        // Only try backend polling if WebSocket isn't available
+        if (!wsConnected && backendAvailable) {
           try {
-            // Try to get telemetry from backend
+            // Try to get telemetry from backend REST endpoint
             const response = await fetch(
               `${import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000"}/telemetry/next`
             );
@@ -177,7 +206,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       samplingRate === "10Hz" ? 100 : 1000
     );
     return () => clearInterval(interval);
-  }, [samplingRate, backendAvailable]);
+  }, [samplingRate, backendAvailable, wsConnected, telemetrySourceIsWebSocket, wstelemetry.length]);
 
   // Auto-stream decisions from backend or mock
   useEffect(() => {
@@ -217,6 +246,18 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [backendAvailable, config]);
 
+  // Get accessible modules based on current role
+  const accessibleModules = getAccessibleModules(role);
+
+  // Check if user has access to a specific module
+  const hasModuleAccess = useCallback(
+    (moduleId: ModuleId) => {
+      const module = DASHBOARD_MODULES[moduleId];
+      return module && module.enabled && hasAccess(role, module.requiredRole);
+    },
+    [role]
+  );
+
   return (
     <DashboardContext.Provider
       value={{
@@ -242,6 +283,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         setSelectedAlert,
         drawerOpen,
         setDrawerOpen,
+        accessibleModules,
+        hasModuleAccess,
       }}
     >
       {children}

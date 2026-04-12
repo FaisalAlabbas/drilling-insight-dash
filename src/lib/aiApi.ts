@@ -2,7 +2,9 @@
  * AI API client for prediction requests with robust error handling and timeout
  */
 
-const baseUrl = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000";
+import { PredictResponse } from "./api-types";
+
+const baseUrl = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8001";
 const API_TIMEOUT = 15000; // 15 seconds
 
 export interface PredictPayload {
@@ -19,25 +21,7 @@ export interface PredictPayload {
   Inclination_deg: number;
   Azimuth_deg: number;
   Formation_Class: string;
-}
-
-export interface PredictResponse {
-  recommendation: string;
-  confidence: number;
-  gate_status: "ACCEPTED" | "REDUCED" | "REJECTED";
-  alert_message: string;
-  decision_record: {
-    timestamp: string;
-    model_version: string;
-    feature_summary: { [key: string]: number };
-    steering_command: string;
-    confidence_score: number;
-    gate_outcome: "ACCEPTED" | "REDUCED" | "REJECTED";
-    rejection_reason: string | null;
-    execution_status: string;
-    fallback_mode: string | null;
-    event_tags: string[];
-  };
+  Depth_ft?: number;
 }
 
 export class APIError extends Error {

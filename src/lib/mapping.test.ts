@@ -4,6 +4,7 @@ import { TelemetryPacket } from "./types";
 
 const mockTelemetry: TelemetryPacket = {
   timestamp: "2024-04-07T12:00:00Z",
+  depth_ft: 10000,
   wob_klbf: 50,
   torque_kftlb: 100,
   rpm: 150,
@@ -14,6 +15,11 @@ const mockTelemetry: TelemetryPacket = {
   dls_deg_100ft: 1.5,
   gamma_gapi: 100,
   resistivity_ohm_m: 10,
+  phif: 0.25,
+  vsh: 0.35,
+  sw: 0.45,
+  klogh: 0.55,
+  formation_class: "sandstone",
 };
 
 describe("mapTelemetryToPredict", () => {
@@ -76,9 +82,9 @@ describe("validateTelemetryPacket", () => {
   });
 
   it("detects non-numeric fields", () => {
-    const invalid = { ...mockTelemetry, wob_klbf: "invalid" as unknown };
+    const invalid = { ...mockTelemetry, wob_klbf: "invalid" } as Record<string, unknown>;
 
-    const result = validateTelemetryPacket(invalid);
+    const result = validateTelemetryPacket(invalid as Partial<TelemetryPacket>);
     expect(result.valid).toBe(false);
     expect(result.errors).toContain("Field wob_klbf must be a number");
   });

@@ -30,6 +30,8 @@ export function validateTelemetryPacket(telemetry: Partial<TelemetryPacket>): {
 } {
   const errors: string[] = [];
   const requiredFields = [
+    "timestamp",
+    "depth_ft",
     "wob_klbf",
     "torque_kftlb",
     "rpm",
@@ -40,13 +42,20 @@ export function validateTelemetryPacket(telemetry: Partial<TelemetryPacket>): {
     "dls_deg_100ft",
     "gamma_gapi",
     "resistivity_ohm_m",
+    "phif",
+    "vsh",
+    "sw",
+    "klogh",
+    "formation_class",
   ] as const;
 
   for (const field of requiredFields) {
-    if (telemetry[field] === undefined || telemetry[field] === null) {
+    if (telemetry[field as keyof TelemetryPacket] === undefined || telemetry[field as keyof TelemetryPacket] === null) {
       errors.push(`Missing required field: ${field}`);
-    } else if (typeof telemetry[field] !== "number") {
+    } else if (field !== "formation_class" && field !== "timestamp" && typeof telemetry[field as keyof TelemetryPacket] !== "number") {
       errors.push(`Field ${field} must be a number`);
+    } else if ((field === "formation_class" || field === "timestamp") && typeof telemetry[field as keyof TelemetryPacket] !== "string") {
+      errors.push(`Field ${field} must be a string`);
     }
   }
 

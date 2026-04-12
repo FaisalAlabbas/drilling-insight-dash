@@ -10,19 +10,22 @@ from typing import List
 class Settings:
     """Application settings loaded from environment variables"""
 
+    # Get the directory where this settings.py file is located
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
     # Model and data settings
     EXCEL_PATH: str = os.getenv(
-        "EXCEL_PATH", "models/rss_dashboard_dataset_built_recalc.xlsx"
+        "EXCEL_PATH", os.path.join(_BASE_DIR, "models", "rss_dashboard_dataset_built_recalc.xlsx")
     )
-    MODEL_PATH: str = os.getenv("MODEL_PATH", "models/recommendation_model.joblib")
-    SCHEMA_PATH: str = os.getenv("SCHEMA_PATH", "models/schema.joblib")
-    METRICS_PATH: str = os.getenv("METRICS_PATH", "models/metrics.json")
+    MODEL_PATH: str = os.getenv("MODEL_PATH", os.path.join(_BASE_DIR, "models", "recommendation_model.joblib"))
+    SCHEMA_PATH: str = os.getenv("SCHEMA_PATH", os.path.join(_BASE_DIR, "models", "schema.joblib"))
+    METRICS_PATH: str = os.getenv("METRICS_PATH", os.path.join(_BASE_DIR, "models", "metrics.json"))
 
     # CORS settings
     CORS_ORIGINS: List[str] = [
         origin.strip()
         for origin in os.getenv(
-            "AI_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+            "AI_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080"
         ).split(",")
     ]
 

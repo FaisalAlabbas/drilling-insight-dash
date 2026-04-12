@@ -8,26 +8,17 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, CheckCircle, XCircle, TrendingDown } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
-interface DataQualityMetrics {
-  total_records: number;
-  missing_data_rate: number;
-  gap_count: number;
-  outlier_count: number;
-  data_completeness: number;
-  last_updated: string;
-}
-
-const API_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000";
+import { fetchDataQuality } from "@/lib/api-service";
+import type { DataQualityMetrics } from "@/lib/api-types";
 
 const getDataQuality = async (): Promise<DataQualityMetrics> => {
-  const response = await fetch(`${API_BASE_URL}/telemetry/quality`);
-  if (!response.ok) {
+  const result = await fetchDataQuality();
+  if (!result) {
     throw new Error("Failed to fetch data quality metrics");
   }
-  return response.json();
+  return result;
 };
 
 export default function DataQuality() {
@@ -38,7 +29,7 @@ export default function DataQuality() {
   } = useQuery({
     queryKey: ["data-quality"],
     queryFn: getDataQuality,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   if (isLoading) {
@@ -57,17 +48,29 @@ export default function DataQuality() {
     );
   }
 
-  const getQualityColor = (rate: number) => {
-    if (rate >= 0.95) return "text-green-600";
-    if (rate >= 0.85) return "text-yellow-600";
-    return "text-red-600";
-  };
+  if (!quality) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-destructive">No data quality metrics available</div>
+      </div>
+    );
+  }
 
   const getQualityIcon = (rate: number) => {
     if (rate >= 0.95) return <CheckCircle className="h-4 w-4 text-green-600" />;
     if (rate >= 0.85) return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
     return <XCircle className="h-4 w-4 text-red-600" />;
   };
+
+  const totalMissingRate =
+    Object.values(quality.missing_rate_by_column).reduce((sum, rate) => sum + rate, 0) /
+    Math.max(1, Object.keys(quality.missing_rate_by_column).length);
+  const totalOutliers = Object.values(quality.outlier_counts).reduce(
+    (sum, count) => sum + count,
+    0
+  );
+  const dataCompleteness =
+    ((quality.total_rows - totalOutliers) / Math.max(1, quality.total_rows)) * 100;
 
   return (
     <div className="space-y-6">
@@ -82,15 +85,13 @@ export default function DataQuality() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Data Completeness</CardTitle>
-            {getQualityIcon(quality?.data_completeness || 0)}
+            {getQualityIcon(dataCompleteness / 100)}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {((quality?.data_completeness || 0) * 100).toFixed(1)}%
-            </div>
-            <Progress value={(quality?.data_completeness || 0) * 100} className="mt-2" />
+            <div className="text-2xl font-bold">{dataCompleteness.toFixed(1)}%</div>
+            <Progress value={dataCompleteness} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-1">
-              {quality?.total_records || 0} total records
+              {quality.total_rows} total records
             </p>
           </CardContent>
         </Card>
@@ -98,105 +99,104 @@ export default function DataQuality() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Missing Data Rate</CardTitle>
-            <TrendingDown
-              className={`h-4 w-4 ${getQualityColor(1 - (quality?.missing_data_rate || 0))}`}
-            />
+            {getQualityIcon(1 - totalMissingRate)}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {((quality?.missing_data_rate || 0) * 100).toFixed(1)}%
+              {(totalMissingRate * 100).toFixed(2)}%
             </div>
-            <Progress
-              value={(1 - (quality?.missing_data_rate || 0)) * 100}
-              className="mt-2"
-            />
-            <p className="text-xs text-muted-foreground mt-1">Data availability</p>
+            <Progress value={totalMissingRate * 100} className="mt-2" />
+            <p className="text-xs text-muted-foreground mt-1">
+              Across {Object.keys(quality.missing_rate_by_column).length} columns
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Data Gaps</CardTitle>
-            <Badge variant={quality?.gap_count === 0 ? "default" : "destructive"}>
-              {quality?.gap_count || 0}
-            </Badge>
+            {quality.gaps_detected > 5 ? (
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            ) : (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            )}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{quality?.gap_count || 0}</div>
-            <p className="text-xs text-muted-foreground">Missing time periods</p>
+            <div className="text-2xl font-bold">{quality.gaps_detected}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {quality.gaps_detected > 0
+                ? "Gaps in timestamp sequence"
+                : "No gaps detected"}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outliers Detected</CardTitle>
-            <Badge variant={quality?.outlier_count === 0 ? "default" : "secondary"}>
-              {quality?.outlier_count || 0}
-            </Badge>
+            <CardTitle className="text-sm font-medium">Outliers</CardTitle>
+            {totalOutliers > 10 ? (
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            ) : (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            )}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{quality?.outlier_count || 0}</div>
-            <p className="text-xs text-muted-foreground">Anomalous readings</p>
+            <div className="text-2xl font-bold">{totalOutliers}</div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {totalOutliers > 0 ? "Anomalies detected" : "No anomalies"}
+            </p>
           </CardContent>
         </Card>
       </div>
 
+      {Object.keys(quality.missing_rate_by_column).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Missing Data by Column</CardTitle>
+            <CardDescription>
+              Percentage of missing values for each telemetry field
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(quality.missing_rate_by_column).map(([column, rate]) => (
+                <div key={column}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">{column}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {(rate * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <Progress value={rate * 100} />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Quality Details</CardTitle>
-          <CardDescription>
-            Last updated:{" "}
-            {quality?.last_updated
-              ? new Date(quality.last_updated).toLocaleString()
-              : "Never"}
-          </CardDescription>
+          <CardTitle>Outlier Statistics</CardTitle>
+          <CardDescription>Statistical anomalies detected in sensor data</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Record Count</span>
-                <span className="font-medium">{quality?.total_records || 0}</span>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {Object.entries(quality.outlier_counts).map(([metric, count]) => (
+              <div key={metric} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium capitalize">{metric}</span>
+                  <Badge variant={count > 0 ? "destructive" : "default"}>
+                    {count} outlier{count !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {count > 0
+                    ? `${count} reading${count !== 1 ? "s" : ""} exceed range`
+                    : "All readings normal"}
+                </p>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Data Completeness</span>
-                <span
-                  className={`font-medium ${getQualityColor(quality?.data_completeness || 0)}`}
-                >
-                  {((quality?.data_completeness || 0) * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Missing Data Rate</span>
-                <span
-                  className={`font-medium ${getQualityColor(1 - (quality?.missing_data_rate || 0))}`}
-                >
-                  {((quality?.missing_data_rate || 0) * 100).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Data Gaps</span>
-                <span className="font-medium">{quality?.gap_count || 0}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Outlier Count</span>
-                <span className="font-medium">{quality?.outlier_count || 0}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Status</span>
-                <Badge
-                  variant={
-                    (quality?.data_completeness || 0) >= 0.95 ? "default" : "destructive"
-                  }
-                >
-                  {(quality?.data_completeness || 0) >= 0.95
-                    ? "Healthy"
-                    : "Needs Attention"}
-                </Badge>
-              </div>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>

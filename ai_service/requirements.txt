@@ -8,3 +8,9 @@ numpy
 pytest
 pytest-asyncio
 httpx
+PyJWT
+passlib[bcrypt]
+sqlalchemy>=2.0.0
+asyncpg
+alembic
+psycopg2-binary

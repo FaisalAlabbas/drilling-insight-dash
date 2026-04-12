@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Download, TrendingUp, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { SteeringCommand } from "@/lib/types";
+import type { SteeringCommand } from "@/lib/api-types";
 import {
   LineChart,
   Line,
@@ -16,7 +16,6 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import type { SteeringCommand } from "@/lib/types";
 
 export function ReportingView() {
   const { decisions, alerts, telemetry, role } = useDashboard();
@@ -34,8 +33,8 @@ export function ReportingView() {
         ? decisions.reduce((sum, d) => sum + d.confidence_score, 0) / totalDecisions
         : 0;
 
-    const criticalAlerts = alerts.filter((a) => a.severity === "CRITICAL").length;
-    const warningAlerts = alerts.filter((a) => a.severity === "WARN").length;
+    const criticalAlerts = alerts.filter((a) => a.severity === "critical").length;
+    const warningAlerts = alerts.filter((a) => a.severity === "high").length;
 
     const commandCounts: Record<SteeringCommand, number> = {
       "No Change": 0,

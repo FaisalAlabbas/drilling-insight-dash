@@ -1,4 +1,4 @@
-import type { TelemetryPacket, DecisionRecord } from "./types";
+import type { TelemetryPacket, DecisionRecord } from "./api-types";
 
 export const exportToCSV = (
   telemetry: TelemetryPacket[],
@@ -16,6 +16,7 @@ export const exportToCSV = (
     return {
       timestamp: packet.timestamp,
       // Telemetry data
+      depth_ft: packet.depth_ft,
       wob_klbf: packet.wob_klbf,
       torque_kftlb: packet.torque_kftlb,
       rpm: packet.rpm,
@@ -32,7 +33,6 @@ export const exportToCSV = (
       sw: packet.sw,
       klogh: packet.klogh,
       formation_class: packet.formation_class,
-      depth_ft: packet.depth_ft,
       // Decision data
       steering_command: decision?.steering_command || "",
       confidence_score: decision?.confidence_score || "",
@@ -47,6 +47,7 @@ export const exportToCSV = (
   // Create CSV headers
   const headers = [
     "timestamp",
+    "depth_ft",
     "wob_klbf",
     "torque_kftlb",
     "rpm",
@@ -62,7 +63,6 @@ export const exportToCSV = (
     "sw",
     "klogh",
     "formation_class",
-    "depth_ft",
     "steering_command",
     "confidence_score",
     "gate_outcome",
