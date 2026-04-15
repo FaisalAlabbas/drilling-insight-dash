@@ -1,14 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -25,22 +22,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertTriangle, TrendingUp, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
-const baseUrl = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000";
-
-const fetchModelMetrics = async () => {
-  const response = await fetch(`${baseUrl}/model/metrics`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch model metrics");
-  }
-  return response.json();
-};
+import { fetchModelMetrics } from "@/lib/api-service";
+import { predictDecision } from "@/lib/aiApi";
+import type { PredictResponse } from "@/lib/api-types";
 
 export function AIEvaluation() {
-  const [testResult, setTestResult] = useState<unknown>(null);
+  const [testResult, setTestResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const {
     data: modelMetrics,
@@ -87,33 +78,27 @@ export function AIEvaluation() {
 
   const runTest = async () => {
     setLoading(true);
+    setTestError(null);
     try {
-      const response = await fetch(`${baseUrl}/predict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          WOB_klbf: 35,
-          RPM_demo: 110,
-          ROP_ft_hr: 75,
-          PHIF: 0.22,
-          VSH: 0.32,
-          SW: 0.42,
-          KLOGH: 0.52,
-          Torque_kftlb: 3500,
-          Vibration_g: 0.35,
-          DLS_deg_per_100ft: 1.8,
-          Inclination_deg: 50,
-          Azimuth_deg: 105,
-          Formation_Class: "Limestone",
-        }),
+      const data = await predictDecision({
+        WOB_klbf: 35,
+        RPM_demo: 110,
+        ROP_ft_hr: 75,
+        PHIF: 0.22,
+        VSH: 0.32,
+        SW: 0.42,
+        KLOGH: 0.52,
+        Torque_kftlb: 3500,
+        Vibration_g: 0.35,
+        DLS_deg_per_100ft: 1.8,
+        Inclination_deg: 50,
+        Azimuth_deg: 105,
+        Formation_Class: "Limestone",
       });
-      const data = await response.json();
       setTestResult(data);
     } catch (error) {
-      console.error("Test failed:", error);
-      alert(
-        "Failed to connect to backend. Make sure the API server is running on port 8000."
-      );
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      setTestError(`Failed to connect to backend: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -400,6 +385,13 @@ export function AIEvaluation() {
                     <Button onClick={runTest} disabled={loading} className="w-full">
                       {loading ? "Testing..." : "Run Test Prediction"}
                     </Button>
+
+                    {testError && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{testError}</AlertDescription>
+                      </Alert>
+                    )}
 
                     {testResult && (
                       <div className="space-y-4 mt-4">

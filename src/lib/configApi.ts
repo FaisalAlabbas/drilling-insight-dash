@@ -1,8 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ConfigResponse } from "./api-types";
 import { ConfigResponseSchema } from "./zod-schemas";
-
-const API_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8001";
+import { API_BASE_URL } from "./config";
 
 export const getConfig = async (): Promise<ConfigResponse> => {
   const response = await fetch(`${API_BASE_URL}/config`);

@@ -21,27 +21,22 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-          cache-dependency-path: drilling-insight-dash/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
-        working-directory: ./drilling-insight-dash
 
       - name: Run linter
         run: npm run lint
-        working-directory: ./drilling-insight-dash
 
       - name: Check formatting
         run: npm run check:format
-        working-directory: ./drilling-insight-dash
 
       - name: Run tests
         run: npm run test
-        working-directory: ./drilling-insight-dash
 
       - name: Build
         run: npm run build
-        working-directory: ./drilling-insight-dash
 
   backend:
     runs-on: ubuntu-latest

@@ -25,6 +25,7 @@ import { getRecommendation, checkBackendHealth } from "./api-service";
 import { useConfig } from "./configApi";
 import { DASHBOARD_MODULES, getAccessibleModules, hasAccess, type ModuleId } from "./dashboard-modules";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
+import { API_BASE_URL, IS_PRODUCTION } from "./config";
 
 type SidebarModule = ModuleId;
 
@@ -57,6 +58,10 @@ export interface DashboardContextType {
   setSelectedAlert: (a: AlertEvent | null) => void;
   drawerOpen: boolean;
   setDrawerOpen: (o: boolean) => void;
+  /** True when data is coming from mock generation (backend unreachable). */
+  isMockData: boolean;
+  /** True when backend is unreachable and app is running in production mode. */
+  isBackendDegraded: boolean;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);
@@ -71,9 +76,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [selectedAlert, setSelectedAlert] = useState<AlertEvent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
+  const [isMockData, setIsMockData] = useState(false);
+
+  // True only in production mode with unreachable backend
+  const isBackendDegraded = IS_PRODUCTION && !backendAvailable;
 
   // Use config from backend
-  const { data: config, isLoading: configLoading } = useConfig();
+  const { data: config } = useConfig();
 
   const [telemetry, setTelemetry] = useState<TelemetryPacket[]>(() =>
     generateTelemetrySeries(180, 10000)
@@ -138,7 +147,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const {
     telemetry: wstelemetry,
     connected: wsConnected,
-    error: wsError,
   } = useTelemetryStream({
     maxBufferSize: 300,
     onError: (error) => {
@@ -157,6 +165,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     if (wstelemetry.length > 0) {
       setTelemetry(wstelemetry);
       setTelemetrySourceIsWebSocket(true);
+      setIsMockData(false);
     }
   }, [wstelemetry]);
 
@@ -177,15 +186,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         if (!wsConnected && backendAvailable) {
           try {
             // Try to get telemetry from backend REST endpoint
-            const response = await fetch(
-              `${import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000"}/telemetry/next`
-            );
+            const response = await fetch(`${API_BASE_URL}/telemetry/next`);
             if (response.ok) {
               const newPacket: TelemetryPacket = await response.json();
               setTelemetry((prev) => {
                 const next = [...prev, newPacket];
                 return next.length > 300 ? next.slice(-300) : next;
               });
+              setIsMockData(false);
               return;
             }
           } catch (error) {
@@ -196,12 +204,20 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Fallback to mock generation
+        // In production, do not silently generate fake telemetry.
+        // Show degraded state instead so operators are never misled.
+        if (IS_PRODUCTION) {
+          setIsMockData(true);
+          return;
+        }
+
+        // Development-only: mock generation fallback
         const newPacket = generateTelemetryPacket(new Date());
         setTelemetry((prev) => {
           const next = [...prev, newPacket];
           return next.length > 300 ? next.slice(-300) : next;
         });
+        setIsMockData(true);
       },
       samplingRate === "10Hz" ? 100 : 1000
     );
@@ -219,9 +235,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         if (backendAvailable && packets.length > 0) {
           const latestTelemetry = packets[packets.length - 1];
           const apiDecision = await getRecommendation(latestTelemetry);
-          newDecision = apiDecision || generateDecisionRecord(new Date(), packets);
+          if (apiDecision) {
+            newDecision = apiDecision;
+          } else if (IS_PRODUCTION) {
+            // In production, skip the interval — don't inject fake decisions
+            return;
+          } else {
+            newDecision = generateDecisionRecord(new Date(), packets);
+          }
+        } else if (IS_PRODUCTION) {
+          // In production with no backend, skip — do not fake data
+          return;
         } else {
-          // Fall back to mock generation
+          // Development-only fallback
           newDecision = generateDecisionRecord(new Date(), packets);
         }
 
@@ -285,6 +311,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         setDrawerOpen,
         accessibleModules,
         hasModuleAccess,
+        isMockData,
+        isBackendDegraded,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { TelemetryPacket } from "@/lib/api-types";
+import { API_BASE_URL } from "@/lib/config";
 
 interface TelemetryStreamMessage {
   type: "telemetry" | "recommendation" | "data_quality" | "heartbeat" | "error" | "connection_established";
@@ -53,10 +54,7 @@ export function useTelemetryStream(options: UseTelemetryStreamOptions = {}) {
       return;
     }
 
-    const wsUrl = `${import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000"}`.replace(
-      /^http/,
-      "ws"
-    ) + "/telemetry/stream";
+    const wsUrl = API_BASE_URL.replace(/^http/, "ws") + "/telemetry/stream";
 
     try {
       wsRef.current = new WebSocket(wsUrl);

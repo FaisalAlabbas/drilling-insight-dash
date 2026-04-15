@@ -97,7 +97,7 @@ _Coming soon - Dashboard screenshots will be added here_
    ```bash
    # Terminal 1: Start backend
    cd ai_service
-   python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
+   python -m uvicorn api:app --reload --host 0.0.0.0 --port 8001
 
    # Terminal 2: Start frontend
    npm run dev
@@ -105,8 +105,8 @@ _Coming soon - Dashboard screenshots will be added here_
 
 8. **Access the dashboard**
    - Frontend: http://localhost:8080
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
+   - Backend API: http://localhost:8001
+   - API Documentation: http://localhost:8001/docs
 
 ## 🤖 AI Training (Optional)
 
@@ -120,9 +120,6 @@ The system supports both rule-based and ML-based recommendations. For ML predict
 ### Training Steps
 
 ```bash
-# Navigate to AI service
-cd ai_service
-
 # Train the model
 python train.py
 
@@ -130,7 +127,7 @@ python train.py
 python evaluate.py
 
 # Start the service (model will be auto-detected)
-python -m uvicorn api:app --reload --port 8000
+python -m uvicorn api:app --reload --port 8001
 ```
 
 ### Model Specifications
@@ -152,7 +149,7 @@ For development, you can run both services simultaneously:
 ```bash
 # Option 1: Manual (two terminals)
 # Terminal 1: Backend
-cd ai_service && python -m uvicorn api:app --reload --port 8000
+cd ai_service && python -m uvicorn api:app --reload --port 8001
 
 # Terminal 2: Frontend
 npm run dev
@@ -190,13 +187,13 @@ Place your dataset at `ai_service/data/rss_dashboard_dataset_built_recalc.xlsx` 
 The frontend connects to the backend using the `VITE_AI_BASE_URL` environment variable:
 
 ```typescript
-const baseUrl = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000";
+const baseUrl = import.meta.env.VITE_AI_BASE_URL ?? "http://localhost:8001";
 ```
 
 Set this in your `.env.local` file:
 
 ```
-VITE_AI_BASE_URL=http://localhost:8000
+VITE_AI_BASE_URL=http://localhost:8001
 ```
 
 ## 📁 Folder Structure
@@ -235,7 +232,7 @@ These are loaded from `ai_service/models/rss_dashboard_dataset_built_recalc.xlsx
 
 ### Environment Variables
 
-- `VITE_AI_BASE_URL`: Backend API base URL (default: http://localhost:8000)
+- `VITE_AI_BASE_URL`: Backend API base URL (default: http://localhost:8001)
 
 ## 🔧 Troubleshooting
 
@@ -243,14 +240,14 @@ These are loaded from `ai_service/models/rss_dashboard_dataset_built_recalc.xlsx
 
 **CORS Errors**
 
-- Ensure backend is running on the correct port (8000)
+- **Ensure backend is running on the correct port (8001)**
 - Check that frontend `.env.local` has correct `VITE_AI_BASE_URL`
 - Backend CORS is configurable via `AI_CORS_ORIGINS` environment variable
 - Default allowed origins: `localhost:5173`, `127.0.0.1:5173`
 
 **API Not Responding**
 
-- Verify backend server is running: `curl http://localhost:8000/health`
+- Verify backend server is running: `curl http://localhost:8001/health`
 - Check backend logs for errors
 - Ensure Python virtual environment is activated
 - Backend startup log will show if ML model was loaded or fell back to rules
@@ -263,7 +260,7 @@ These are loaded from `ai_service/models/rss_dashboard_dataset_built_recalc.xlsx
 
 **Port Conflicts**
 
-- Backend default port: 8000
+- **Backend default port: 8001**
 - Frontend default port: 5173 (Vite dev server)
 - Change ports in startup commands if needed
 
@@ -290,7 +287,7 @@ These are loaded from `ai_service/models/rss_dashboard_dataset_built_recalc.xlsx
 
 ### Getting Help
 
-- Check API documentation: http://localhost:8000/docs
+- Check API documentation: http://localhost:8001/docs
 - Review backend logs in terminal for error details
 - Frontend logs visible in browser console (F12)
 - Verify all prerequisites are installed
@@ -315,7 +312,7 @@ npm run dev:all
 
 # 4. Access the dashboard
 # Frontend: http://localhost:5173
-# Backend API: http://localhost:8000/docs
+# Backend API: http://localhost:8001/docs
 ```
 
 ### Running Quality Checks
@@ -331,8 +328,7 @@ npm run test                # Run all tests once
 npm run test:watch          # Watch mode during development
 
 # Backend tests
-cd ai_service
-pytest test_api.py -v       # Run API tests
+cd ai_service && pytest test_api.py -v       # Run API tests
 cd ..
 
 # Build frontend

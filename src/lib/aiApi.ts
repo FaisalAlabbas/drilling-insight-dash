@@ -3,8 +3,9 @@
  */
 
 import { PredictResponse } from "./api-types";
+import { API_BASE_URL } from "./config";
 
-const baseUrl = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8001";
+const baseUrl = API_BASE_URL;
 const API_TIMEOUT = 15000; // 15 seconds
 
 export interface PredictPayload {
