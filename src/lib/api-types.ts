@@ -105,11 +105,21 @@ export interface ModelMetrics {
   message?: string;
   model_loaded?: boolean;
   model_version?: string;
+  model_type?: string;
   accuracy?: number;
   precision?: number;
   recall?: number;
   f1_score?: number;
-  [key: string]: unknown;
+  macro_f1?: number;
+  weighted_f1?: number;
+  per_class_f1?: Record<string, number>;
+  timestamp?: string;
+  dataset_info?: {
+    total_samples: number;
+    train_samples: number;
+    test_samples: number;
+    features: number;
+  };
 }
 
 // ============================================================================

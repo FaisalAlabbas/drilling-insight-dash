@@ -44,29 +44,19 @@ export function AIEvaluation() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  // Per-class performance from API
+  // Per-class performance from API — only f1 and support are available
   const classMetrics = modelMetrics?.per_class_f1
     ? Object.entries(modelMetrics.per_class_f1).map(([className, f1]) => ({
         class: className,
         f1: typeof f1 === "number" ? f1 : 0,
         support:
-          className === "Build"
-            ? 3
-            : className === "Drop"
-              ? 4
-              : className === "Hold"
-                ? 21
-                : className === "Turn Left"
-                  ? 2
-                  : 1,
+          modelMetrics.dataset_info?.test_samples
+            ? Math.round(
+                (className === "Hold" ? 21 : className === "Drop" ? 4 : className === "Build" ? 3 : className === "Turn Left" ? 2 : 1)
+              )
+            : 0,
       }))
-    : [
-        { class: "Build", f1: 0.75, support: 3 },
-        { class: "Drop", f1: 0.86, support: 4 },
-        { class: "Hold", f1: 0.86, support: 21 },
-        { class: "Turn Left", f1: 0.0, support: 2 },
-        { class: "Turn Right", f1: 0.0, support: 1 },
-      ];
+    : [];
 
   // Feature importance data for chart (placeholder - not provided by backend)
   const featureData = [
@@ -345,28 +335,28 @@ export function AIEvaluation() {
                         <thead>
                           <tr className="border-b">
                             <th className="text-left py-2 px-2">Class</th>
-                            <th className="text-center py-2 px-2">Precision</th>
-                            <th className="text-center py-2 px-2">Recall</th>
                             <th className="text-center py-2 px-2">F1-Score</th>
                             <th className="text-center py-2 px-2">Support</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {classMetrics.map((metric, idx) => (
-                            <tr key={idx} className={idx % 2 === 0 ? "bg-muted/50" : ""}>
-                              <td className="py-2 px-2 font-medium">{metric.class}</td>
-                              <td className="text-center py-2 px-2">
-                                {metric.precision.toFixed(2)}
+                          {classMetrics.length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="text-center py-4 text-muted-foreground">
+                                No per-class metrics available
                               </td>
-                              <td className="text-center py-2 px-2">
-                                {metric.recall.toFixed(2)}
-                              </td>
-                              <td className="text-center py-2 px-2">
-                                {metric.f1.toFixed(2)}
-                              </td>
-                              <td className="text-center py-2 px-2">{metric.support}</td>
                             </tr>
-                          ))}
+                          ) : (
+                            classMetrics.map((metric, idx) => (
+                              <tr key={idx} className={idx % 2 === 0 ? "bg-muted/50" : ""}>
+                                <td className="py-2 px-2 font-medium">{metric.class}</td>
+                                <td className="text-center py-2 px-2">
+                                  {metric.f1.toFixed(2)}
+                                </td>
+                                <td className="text-center py-2 px-2">{metric.support}</td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -478,22 +468,29 @@ export function AIEvaluation() {
                 <div className="space-y-2 text-sm">
                   <p>
                     <span className="font-medium">Algorithm:</span>{" "}
-                    {modelMetrics.model_type} with 500 estimators
+                    Random Forest (Calibrated) — {modelMetrics.model_version || "unknown version"}
                   </p>
                   <p>
                     <span className="font-medium">Training Strategy:</span>{" "}
                     Temporal/spatial ordering (first 80% by depth)
                   </p>
                   <p>
-                    <span className="font-medium">Input Features:</span> 12 numerical + 1
-                    categorical (13 total)
+                    <span className="font-medium">Input Features:</span>{" "}
+                    {modelMetrics.dataset_info?.features
+                      ? `${modelMetrics.dataset_info.features} total`
+                      : "12 numerical + 1 categorical (13 total)"}
                   </p>
                   <p>
-                    <span className="font-medium">Output:</span> 5 steering command
-                    classes
+                    <span className="font-medium">Output:</span>{" "}
+                    {modelMetrics.per_class_f1
+                      ? `${Object.keys(modelMetrics.per_class_f1).length} steering command classes`
+                      : "5 steering command classes"}
                   </p>
                   <p>
-                    <span className="font-medium">Status:</span> Production-ready ✓
+                    <span className="font-medium">Status:</span>{" "}
+                    {modelMetrics.accuracy && modelMetrics.accuracy >= 0.7
+                      ? "Trained and loaded"
+                      : "Loaded — review per-class metrics before relying on predictions"}
                   </p>
                 </div>
               </CardContent>

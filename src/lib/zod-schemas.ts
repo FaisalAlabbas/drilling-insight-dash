@@ -127,10 +127,21 @@ export const ModelMetricsSchema = z.object({
   message: z.string().optional(),
   model_loaded: z.boolean().optional(),
   model_version: z.string().optional(),
+  model_type: z.string().optional(),
   accuracy: z.number().min(0).max(1).optional(),
   precision: z.number().min(0).max(1).optional(),
   recall: z.number().min(0).max(1).optional(),
   f1_score: z.number().min(0).max(1).optional(),
+  macro_f1: z.number().min(0).max(1).optional(),
+  weighted_f1: z.number().min(0).max(1).optional(),
+  per_class_f1: z.record(z.string(), z.number()).optional(),
+  timestamp: z.string().optional(),
+  dataset_info: z.object({
+    total_samples: z.number(),
+    train_samples: z.number(),
+    test_samples: z.number(),
+    features: z.number(),
+  }).optional(),
 });
 
 export type ModelMetrics = z.infer<typeof ModelMetricsSchema>;
