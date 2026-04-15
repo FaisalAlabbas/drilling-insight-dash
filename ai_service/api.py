@@ -15,7 +15,7 @@ import joblib
 import json
 import asyncio
 import jwt
-import os
+from passlib.context import CryptContext
 
 # Database imports
 from database.db import get_db, check_database_connection
@@ -28,14 +28,20 @@ from database.schemas import (
     AlertCreate, AlertSeverity, AlertStatus
 )
 
+# Settings (SECRET_KEY is validated at startup — fails fast in production)
+from settings import settings
+
 # Authentication setup
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 security = HTTPBearer(auto_error=False)
 
-# Authentication models
+# Password hashing context (bcrypt)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Authentication models (defined once)
 class UserCredentials(BaseModel):
     username: str
     password: str
@@ -53,27 +59,14 @@ class User(BaseModel):
     role: str  # "operator", "engineer", "admin"
     disabled: Optional[bool] = None
 
-# Authentication models
-class UserCredentials(BaseModel):
-    username: str
-    password: str
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain-text password against a bcrypt hash."""
+    return pwd_context.verify(plain_password, hashed_password)
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
+def hash_password(plain_password: str) -> str:
+    """Hash a plain-text password using bcrypt."""
+    return pwd_context.hash(plain_password)
 
-class TokenData(BaseModel):
-    username: Optional[str] = None
-    role: Optional[str] = None
-
-class User(BaseModel):
-    username: str
-    role: str  # "operator", "engineer", "admin"
-    disabled: Optional[bool] = None
-
-def verify_password(plain_password, stored_password):
-    """Verify a password (simplified for demo)"""
-    return plain_password == stored_password
 
 def get_user(username: str, db = Depends(get_db)):
     """Get user from database"""
@@ -293,24 +286,6 @@ class DataQualityResponse(BaseModel):
     missing_rate_by_column: Dict[str, float]
     gaps_detected: int
     outlier_counts: Dict[str, int]
-
-# Authentication models
-class UserCredentials(BaseModel):
-    username: str
-    password: str
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-    role: Optional[str] = None
-
-class User(BaseModel):
-    username: str
-    role: str  # "operator", "engineer", "admin"
-    disabled: Optional[bool] = None
 
 @app.get("/health")
 async def health_check(db = Depends(get_db)):

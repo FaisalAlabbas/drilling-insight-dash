@@ -5,6 +5,7 @@ A comprehensive database layer for the Drilling Insight Dashboard built with SQL
 ## Overview
 
 This database layer provides:
+
 - **SQLAlchemy 2.0 ORM models** with proper relationships and constraints
 - **Pydantic schemas** for API request/response validation
 - **Repository pattern** for clean data access layer
@@ -102,6 +103,7 @@ User (1) ──── (N) AuditLog
 Each repository provides typed CRUD operations with proper error handling:
 
 ### UserRepository
+
 ```python
 from database.repositories import UserRepository
 
@@ -117,6 +119,7 @@ stats = repo.get_user_stats()
 ```
 
 ### TelemetryRepository
+
 ```python
 from database.repositories import TelemetryRepository
 
@@ -128,6 +131,7 @@ telemetry = repo.get_latest_by_well("well_001", limit=100)
 ```
 
 ### DecisionRepository
+
 ```python
 from database.repositories import DecisionRepository
 
@@ -144,6 +148,7 @@ decisions = repo.get_decision_history(
 ```
 
 ### AlertRepository
+
 ```python
 from database.repositories import AlertRepository
 
@@ -159,6 +164,7 @@ alerts = repo.fetch_alerts_by_severity_status(
 ```
 
 ### ConfigRepository
+
 ```python
 from database.repositories import ConfigRepository
 

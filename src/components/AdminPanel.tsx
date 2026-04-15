@@ -1,16 +1,9 @@
 import { useDashboard } from "@/lib/dashboard-context";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import {
-  Shield,
-  Users,
-  Settings,
-  Database,
-  AlertCircle,
-  CheckCircle2,
-} from "lucide-react";
+import { Shield, Users, Settings, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { UserRole, EdgeHealth } from "@/lib/types";
+import type { UserRole } from "@/lib/types";
 
 interface User {
   id: string;
@@ -21,8 +14,7 @@ interface User {
 }
 
 export function AdminPanel() {
-  const { role, setRole, edgeHealth, setEdgeHealth, telemetry, decisions, alerts } =
-    useDashboard();
+  const { role, edgeHealth, telemetry, decisions, alerts } = useDashboard();
   const [adminTab, setAdminTab] = useState<"users" | "health" | "config">("users");
 
   const [users] = useState<User[]>([

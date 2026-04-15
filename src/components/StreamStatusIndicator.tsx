@@ -26,7 +26,11 @@ export function StreamStatusIndicator({
 
   const getStatusIcon = () => {
     if (status.wsError || !status.wsConnected) {
-      return !status.fallbackActive ? <WifiOff className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />;
+      return !status.fallbackActive ? (
+        <WifiOff className="w-3 h-3" />
+      ) : (
+        <AlertTriangle className="w-3 h-3" />
+      );
     }
     return <Wifi className="w-3 h-3" />;
   };
@@ -60,7 +64,10 @@ export function StreamStatusIndicator({
       </span>
 
       {status.messageLatency > 5000 && (
-        <AlertTriangle className="w-4 h-4 text-yellow-600" title="High latency detected" />
+        <AlertTriangle
+          className="w-4 h-4 text-yellow-600"
+          title="High latency detected"
+        />
       )}
     </div>
   );

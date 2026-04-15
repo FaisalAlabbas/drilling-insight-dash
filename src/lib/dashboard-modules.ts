@@ -72,7 +72,7 @@ export const DASHBOARD_MODULES: Record<ModuleId, ModuleConfig> = {
     enabled: true,
     order: 3,
   },
-  "alerts": {
+  alerts: {
     id: "alerts",
     name: "Alerts",
     description: "Alert management and incident tracking",
@@ -83,7 +83,7 @@ export const DASHBOARD_MODULES: Record<ModuleId, ModuleConfig> = {
     enabled: true,
     order: 4,
   },
-  "history": {
+  history: {
     id: "history",
     name: "History",
     description: "Historical data search and export",
@@ -105,7 +105,7 @@ export const DASHBOARD_MODULES: Record<ModuleId, ModuleConfig> = {
     enabled: true,
     order: 6,
   },
-  "reporting": {
+  reporting: {
     id: "reporting",
     name: "Reporting",
     description: "Automated reports and analytics",
@@ -221,7 +221,7 @@ export function hasAccess(userRole: UserRole, requiredRole: UserRole): boolean {
 
 export function getAccessibleModules(userRole: UserRole): ModuleConfig[] {
   return Object.values(DASHBOARD_MODULES)
-    .filter(module => module.enabled && hasAccess(userRole, module.requiredRole))
+    .filter((module) => module.enabled && hasAccess(userRole, module.requiredRole))
     .sort((a, b) => a.order - b.order);
 }
 
@@ -230,7 +230,7 @@ export function getModuleById(id: ModuleId): ModuleConfig | undefined {
 }
 
 export function getRouteByPath(path: string): RouteConfig | undefined {
-  return DASHBOARD_ROUTES.find(route => route.path === path);
+  return DASHBOARD_ROUTES.find((route) => route.path === path);
 }
 
 // Navigation helpers
@@ -239,10 +239,10 @@ export function getNavigationItems(userRole: UserRole) {
 
   // Group by category
   const categories = {
-    monitoring: accessibleModules.filter(m => m.category === "monitoring"),
-    analysis: accessibleModules.filter(m => m.category === "analysis"),
-    ai: accessibleModules.filter(m => m.category === "ai"),
-    management: accessibleModules.filter(m => m.category === "management"),
+    monitoring: accessibleModules.filter((m) => m.category === "monitoring"),
+    analysis: accessibleModules.filter((m) => m.category === "analysis"),
+    ai: accessibleModules.filter((m) => m.category === "ai"),
+    management: accessibleModules.filter((m) => m.category === "management"),
   };
 
   return categories;

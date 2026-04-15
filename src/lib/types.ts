@@ -9,4 +9,3 @@ export * from "./api-types";
 export type UserRole = "Operator" | "Engineer" | "Admin";
 export type EdgeHealth = "Healthy" | "Degraded";
 export type SamplingRate = "1Hz" | "10Hz";
-

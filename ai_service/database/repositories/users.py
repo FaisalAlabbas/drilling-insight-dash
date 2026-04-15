@@ -6,10 +6,14 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from sqlalchemy import select, update, and_
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
 from ..models import User
 from ..schemas import UserCreate, UserUpdate
 from .base import BaseRepository
+
+# Password hashing context (must match api.py configuration)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserRepository(BaseRepository[User]):
     """Repository for user operations."""
@@ -36,13 +40,12 @@ class UserRepository(BaseRepository[User]):
             raise e
 
     def authenticate_user(self, username: str, password: str) -> Optional[User]:
-        """Authenticate user with username and password."""
+        """Authenticate user with username and password using secure bcrypt verification."""
         try:
             user = self.get_by_username(username)
             if user and user.is_active:
-                # In a real implementation, you'd verify the password hash
-                # For now, we'll do a simple check (demo purposes only)
-                if password == user.password_hash:  # This should be hashed comparison
+                # Use bcrypt to verify the password against the stored hash
+                if pwd_context.verify(password, user.password_hash):
                     # Update last login
                     self.update(user.id, {'last_login_at': datetime.now()})
                     return user
@@ -52,13 +55,13 @@ class UserRepository(BaseRepository[User]):
             raise e
 
     def create_user(self, user_data: UserCreate) -> User:
-        """Create a new user with password hashing."""
+        """Create a new user with secure bcrypt password hashing."""
         try:
             data = user_data.model_dump()
 
-            # In a real implementation, you'd hash the password
-            # For demo purposes, we'll store it as-is (NEVER do this in production)
-            data['password_hash'] = data.pop('password')
+            # Extract plain password and hash it using bcrypt
+            plain_password = data.pop('password')
+            data['password_hash'] = pwd_context.hash(plain_password)
 
             return self.create(data)
         except Exception as e:
@@ -66,13 +69,13 @@ class UserRepository(BaseRepository[User]):
             raise e
 
     def update_user(self, user_id: str, update_data: UserUpdate) -> Optional[User]:
-        """Update user information."""
+        """Update user information with secure password hashing if password is being changed."""
         data = update_data.model_dump(exclude_unset=True)
 
-        # Handle password update
+        # Handle password update with bcrypt hashing
         if 'password' in data:
-            # In a real implementation, you'd hash the password
-            data['password_hash'] = data.pop('password')
+            plain_password = data.pop('password')
+            data['password_hash'] = pwd_context.hash(plain_password)
 
         return self.update(user_id, data)
 
@@ -114,9 +117,9 @@ class UserRepository(BaseRepository[User]):
         return self.update(user_id, {'last_login_at': datetime.now()})
 
     def change_password(self, user_id: str, new_password: str) -> Optional[User]:
-        """Change user's password."""
-        # In a real implementation, you'd hash the password
-        return self.update(user_id, {'password_hash': new_password})
+        """Change user's password with secure bcrypt hashing."""
+        hashed_password = pwd_context.hash(new_password)
+        return self.update(user_id, {'password_hash': hashed_password})
 
     def get_user_stats(self) -> Dict[str, Any]:
         """Get user statistics."""

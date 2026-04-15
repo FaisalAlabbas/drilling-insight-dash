@@ -21,27 +21,22 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "npm"
-          cache-dependency-path: drilling-insight-dash/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
-        working-directory: ./drilling-insight-dash
 
       - name: Run linter
         run: npm run lint
-        working-directory: ./drilling-insight-dash
 
       - name: Check formatting
         run: npm run check:format
-        working-directory: ./drilling-insight-dash
 
       - name: Run tests
         run: npm run test
-        working-directory: ./drilling-insight-dash
 
       - name: Build
         run: npm run build
-        working-directory: ./drilling-insight-dash
 
   backend:
     runs-on: ubuntu-latest
@@ -57,6 +52,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
+          cache-dependency-path: "**/requirements.txt"
 
       - name: Install dependencies
         run: |
@@ -64,9 +60,8 @@ jobs:
           pip install -r ai_service/requirements.txt
 
       - name: Run pytest
-        run: |
-          cd ai_service
-          pytest test_api.py -v --tb=short
+        working-directory: ai_service
+        run: pytest test_api.py -v --tb=short
 
       - name: Check Python syntax
         run: |
@@ -83,9 +78,9 @@ jobs:
       - name: Run basic security checks
         run: |
           echo "Checking for hardcoded secrets..."
-          if grep -r "password=" . --include="*.py" --include="*.ts" --include="*.tsx"; then
+          if grep -r "password=" . --include="*.py" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.venv; then
             echo "Warning: Found potential hardcoded secrets"
           fi
-          if grep -r "api_key=" . --include="*.py" --include="*.ts" --include="*.tsx"; then
+          if grep -r "api_key=" . --include="*.py" --include="*.ts" --include="*.tsx" --exclude-dir=node_modules --exclude-dir=.venv; then
             echo "Warning: Found potential hardcoded API keys"
           fi

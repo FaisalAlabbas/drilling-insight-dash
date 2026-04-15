@@ -13,16 +13,16 @@ interface StreamStatusExampleProps {
 
 /**
  * Example integration of StreamStatusIndicator in dashboard header
- * 
+ *
  * Usage:
- * 
+ *
  * ```typescript
  * import { useDashboard } from "@/lib/dashboard-context";
- * 
+ *
  * function DashboardHeader() {
  *   const { telemetry } = useDashboard();
  *   // ... get other stream status from context/props
- *   
+ *
  *   return (
  *     <header className="border-b">
  *       <div className="flex justify-between items-center p-4">

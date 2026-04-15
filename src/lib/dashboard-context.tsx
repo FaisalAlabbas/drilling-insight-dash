@@ -23,8 +23,14 @@ import {
 } from "./mock-data";
 import { getRecommendation, checkBackendHealth } from "./api-service";
 import { useConfig } from "./configApi";
-import { DASHBOARD_MODULES, getAccessibleModules, hasAccess, type ModuleId } from "./dashboard-modules";
+import {
+  DASHBOARD_MODULES,
+  getAccessibleModules,
+  hasAccess,
+  type ModuleId,
+} from "./dashboard-modules";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
+import { API_BASE_URL, IS_PRODUCTION } from "./config";
 
 type SidebarModule = ModuleId;
 
@@ -44,11 +50,7 @@ export interface DashboardContextType {
   alerts: AlertEvent[];
   accessibleModules: typeof DASHBOARD_MODULES;
   hasModuleAccess: (moduleId: ModuleId) => boolean;
-  addAlert: (
-    title: string,
-    description: string,
-    severity?: AlertSeverity
-  ) => void;
+  addAlert: (title: string, description: string, severity?: AlertSeverity) => void;
   markAlertsAsRead: () => void;
   unreadAlertCount: number;
   selectedDecision: DecisionRecord | null;
@@ -57,6 +59,10 @@ export interface DashboardContextType {
   setSelectedAlert: (a: AlertEvent | null) => void;
   drawerOpen: boolean;
   setDrawerOpen: (o: boolean) => void;
+  /** True when data is coming from mock generation (backend unreachable). */
+  isMockData: boolean;
+  /** True when backend is unreachable and app is running in production mode. */
+  isBackendDegraded: boolean;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);
@@ -71,9 +77,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [selectedAlert, setSelectedAlert] = useState<AlertEvent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
+  const [isMockData, setIsMockData] = useState(false);
+
+  // True only in production mode with unreachable backend
+  const isBackendDegraded = IS_PRODUCTION && !backendAvailable;
 
   // Use config from backend
-  const { data: config, isLoading: configLoading } = useConfig();
+  const { data: config } = useConfig();
 
   const [telemetry, setTelemetry] = useState<TelemetryPacket[]>(() =>
     generateTelemetrySeries(180, 10000)
@@ -103,11 +113,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   // Add alert function (for manual alerts)
   const addAlert = useCallback(
-    (
-      title: string,
-      description: string,
-      severity: AlertSeverity = "medium"
-    ) => {
+    (title: string, description: string, severity: AlertSeverity = "medium") => {
       const newAlert = createManualAlert(title, description, severity);
       setAlerts((prev) => [newAlert, ...prev].slice(0, 100)); // Keep last 100 alerts
     },
@@ -135,11 +141,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Stream telemetry via WebSocket with fallback to mock generation
-  const {
-    telemetry: wstelemetry,
-    connected: wsConnected,
-    error: wsError,
-  } = useTelemetryStream({
+  const { telemetry: wstelemetry, connected: wsConnected } = useTelemetryStream({
     maxBufferSize: 300,
     onError: (error) => {
       console.error("WebSocket telemetry stream error:", error);
@@ -148,15 +150,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   });
 
   // Initialize telemetry with WebSocket data or mock
-  const [telemetrySourceIsWebSocket, setTelemetrySourceIsWebSocket] = useState(
-    false
-  );
+  const [telemetrySourceIsWebSocket, setTelemetrySourceIsWebSocket] = useState(false);
 
   // Integrate WebSocket telemetry into state
   useEffect(() => {
     if (wstelemetry.length > 0) {
       setTelemetry(wstelemetry);
       setTelemetrySourceIsWebSocket(true);
+      setIsMockData(false);
     }
   }, [wstelemetry]);
 
@@ -176,70 +177,91 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         // Only try backend polling if WebSocket isn't available
         if (!wsConnected && backendAvailable) {
           try {
-            // Try to get telemetry from backend REST endpoint
-            const response = await fetch(
-              `${import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000"}/telemetry/next`
-            );
+            // Try to get telemetry from backend REST endpoint using shared service
+            const response = await fetch(`${API_BASE_URL}/telemetry/next`);
             if (response.ok) {
               const newPacket: TelemetryPacket = await response.json();
               setTelemetry((prev) => {
                 const next = [...prev, newPacket];
                 return next.length > 300 ? next.slice(-300) : next;
               });
+              setIsMockData(false);
               return;
             }
           } catch (error) {
-            console.warn(
-              "Failed to fetch telemetry from backend, falling back to mock:",
-              error
-            );
+            console.warn("Failed to fetch telemetry from backend:", error);
           }
         }
 
-        // Fallback to mock generation
+        // In production, do NOT generate fake telemetry data.
+        // Production operators MUST see the true degraded state.
+        // Do not update state — let UI show that data is unavailable.
+        if (IS_PRODUCTION) {
+          // Mark that we're in degraded mode but do NOT fake data
+          setIsMockData(true);
+          return;
+        }
+
+        // Development-only: mock generation fallback for convenience
         const newPacket = generateTelemetryPacket(new Date());
         setTelemetry((prev) => {
           const next = [...prev, newPacket];
           return next.length > 300 ? next.slice(-300) : next;
         });
+        setIsMockData(true);
       },
       samplingRate === "10Hz" ? 100 : 1000
     );
     return () => clearInterval(interval);
-  }, [samplingRate, backendAvailable, wsConnected, telemetrySourceIsWebSocket, wstelemetry.length]);
+  }, [
+    samplingRate,
+    backendAvailable,
+    wsConnected,
+    telemetrySourceIsWebSocket,
+    wstelemetry.length,
+  ]);
 
   // Auto-stream decisions from backend or mock
   useEffect(() => {
     const interval = setInterval(async () => {
       const packets = telemetryRef.current.slice(-5);
       if (packets.length > 0) {
-        let newDecision: DecisionRecord;
+        let newDecision: DecisionRecord | null = null;
 
         // Try to get prediction from backend if available
         if (backendAvailable && packets.length > 0) {
           const latestTelemetry = packets[packets.length - 1];
           const apiDecision = await getRecommendation(latestTelemetry);
-          newDecision = apiDecision || generateDecisionRecord(new Date(), packets);
-        } else {
-          // Fall back to mock generation
+          if (apiDecision) {
+            newDecision = apiDecision;
+          }
+        }
+
+        // In production, only use real backend decisions — never fake data
+        // Development mode allows mock generation as fallback
+        if (!newDecision && !IS_PRODUCTION && packets.length > 0) {
+          // Development-only fallback for convenience
           newDecision = generateDecisionRecord(new Date(), packets);
         }
 
-        setDecisions((prev) => {
-          const next = [...prev, newDecision];
-          return next.length > 200 ? next.slice(-200) : next;
-        });
+        // Only add decision if we have one (backend success or dev fallback)
+        if (newDecision) {
+          setDecisions((prev) => {
+            const next = [...prev, newDecision];
+            return next.length > 200 ? next.slice(-200) : next;
+          });
 
-        // Generate alerts based on real telemetry and decision data
-        const latestTelemetry = packets[packets.length - 1];
-        const newAlerts = generateAlertsFromData(
-          latestTelemetry,
-          newDecision,
-          config?.limits
-        );
+          // Generate alerts based on real telemetry and decision data
+          const latestTelemetry = packets[packets.length - 1];
+          const newAlerts = generateAlertsFromData(
+            latestTelemetry,
+            newDecision,
+            config?.limits
+          );
 
-        if (newAlerts.length > 0) {
-          setAlerts((prev) => [...newAlerts, ...prev].slice(0, 100)); // Keep last 100 alerts
+          if (newAlerts.length > 0) {
+            setAlerts((prev) => [...newAlerts, ...prev].slice(0, 100)); // Keep last 100 alerts
+          }
         }
       }
     }, 5000);
@@ -285,6 +307,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         setDrawerOpen,
         accessibleModules,
         hasModuleAccess,
+        isMockData,
+        isBackendDegraded,
       }}
     >
       {children}
@@ -292,6 +316,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Hook is exported alongside component for convenience; this is safe for fast refresh
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDashboard() {
   const ctx = useContext(DashboardContext);
   if (!ctx) throw new Error("useDashboard must be used within DashboardProvider");

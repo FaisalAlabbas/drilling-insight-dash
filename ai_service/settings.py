@@ -4,7 +4,43 @@ Reads configuration from environment variables with default values.
 """
 
 import os
+import sys
 from typing import List
+
+
+def _require_secret_key() -> str:
+    """
+    Return SECRET_KEY from environment.
+
+    In production (APP_ENV=production) the key MUST be set explicitly;
+    the application will refuse to start with a missing or placeholder value.
+    In other environments a development-only default is used so the service
+    starts without extra setup.
+    """
+    key = os.getenv("SECRET_KEY", "")
+    app_env = os.getenv("APP_ENV", "development").lower()
+
+    insecure_placeholders = {
+        "",
+        "your-secret-key-change-in-production",
+        "your-super-secret-key-change-in-production",
+        "REPLACE_WITH_STRONG_RANDOM_SECRET",
+    }
+
+    if app_env == "production":
+        if not key or key in insecure_placeholders:
+            print(
+                "FATAL: SECRET_KEY environment variable is not set or uses an insecure "
+                "placeholder value. Generate a strong key with:\n"
+                "    openssl rand -hex 32\n"
+                "and set it as the SECRET_KEY environment variable before starting "
+                "the application in production.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    # Development / CI fallback — never acceptable in production
+    return key or "dev-only-insecure-key-do-not-use-in-production"
 
 
 class Settings:
@@ -12,6 +48,9 @@ class Settings:
 
     # Get the directory where this settings.py file is located
     _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    # JWT secret — validated at startup via _require_secret_key()
+    SECRET_KEY: str = _require_secret_key()
 
     # Model and data settings
     EXCEL_PATH: str = os.getenv(

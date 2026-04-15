@@ -1,19 +1,12 @@
 import { useDashboard } from "@/lib/dashboard-context";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Search, Download, Filter, ChevronDown } from "lucide-react";
+import { Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { DecisionRecord } from "@/lib/types";
 
 export function HistoryView() {
-  const {
-    decisions,
-    telemetry,
-    setSelectedDecision,
-    setDrawerOpen,
-    searchQuery,
-    setSearchQuery,
-  } = useDashboard();
+  const { decisions, setSelectedDecision, setDrawerOpen, searchQuery, setSearchQuery } =
+    useDashboard();
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "confidence">("newest");
   const [filterCommand, setFilterCommand] = useState<string>("ALL");
   const [filterOutcome, setFilterOutcome] = useState<string>("ALL");
@@ -161,7 +154,9 @@ export function HistoryView() {
 
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "newest" | "oldest" | "confidence")}
+            onChange={(e) =>
+              setSortBy(e.target.value as "newest" | "oldest" | "confidence")
+            }
             className="bg-muted border border-border rounded px-2 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
           >
             <option value="newest">Newest First</option>

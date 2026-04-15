@@ -1,13 +1,6 @@
 import { useDashboard } from "@/lib/dashboard-context";
 import { cn } from "@/lib/utils";
-import {
-  Shield,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  ArrowRight,
-  AlertCircle,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 

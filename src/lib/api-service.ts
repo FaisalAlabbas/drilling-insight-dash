@@ -14,15 +14,13 @@ import {
 import {
   TelemetryPacketSchema,
   ConfigResponseSchema,
-  DecisionRecordSchema,
   DataQualityMetricsSchema,
   ModelMetricsSchema,
   PredictResponseSchema,
   parseResponseVerbose,
 } from "./zod-schemas";
 import { predictDecision, type PredictPayload } from "./aiApi";
-
-const API_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8001";
+import { API_BASE_URL } from "./config";
 
 /**
  * Map telemetry packet to model input format
@@ -31,7 +29,6 @@ const API_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8001"
 export function mapTelemetryToModelInput(telemetry: TelemetryPacket): PredictPayload {
   // Generate geological features based on telemetry characteristics
   const vibrationNormalized = Math.min(telemetry.vibration_g / 5.0, 1.0);
-  const dlsNormalized = Math.min(telemetry.dls_deg_100ft / 6.0, 1.0);
 
   return {
     WOB_klbf: telemetry.wob_klbf,

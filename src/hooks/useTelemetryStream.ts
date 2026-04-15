@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { TelemetryPacket } from "@/lib/api-types";
+import { API_BASE_URL } from "@/lib/config";
 
 interface TelemetryStreamMessage {
-  type: "telemetry" | "recommendation" | "data_quality" | "heartbeat" | "error" | "connection_established";
+  type:
+    | "telemetry"
+    | "recommendation"
+    | "data_quality"
+    | "heartbeat"
+    | "error"
+    | "connection_established";
   timestamp: string;
   data?: TelemetryPacket;
   message?: string;
@@ -53,10 +60,7 @@ export function useTelemetryStream(options: UseTelemetryStreamOptions = {}) {
       return;
     }
 
-    const wsUrl = `${import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000"}`.replace(
-      /^http/,
-      "ws"
-    ) + "/telemetry/stream";
+    const wsUrl = API_BASE_URL.replace(/^http/, "ws") + "/telemetry/stream";
 
     try {
       wsRef.current = new WebSocket(wsUrl);
@@ -134,6 +138,7 @@ export function useTelemetryStream(options: UseTelemetryStreamOptions = {}) {
       onError?.(connectError);
       scheduleReconnect();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, heartbeatTimeout, maxBufferSize, onError, onTelemetry]);
 
   const scheduleReconnect = useCallback(() => {

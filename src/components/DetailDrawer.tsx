@@ -1,4 +1,4 @@
-import { X, Clock, Tag, Activity } from "lucide-react";
+import { X, Clock, Tag } from "lucide-react";
 import { useDashboard } from "@/lib/dashboard-context";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";

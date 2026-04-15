@@ -28,8 +28,7 @@ const modules = [
 ];
 
 export function DashboardSidebar() {
-  const { activeModule, setActiveModule, role, alerts, unreadAlertCount } =
-    useDashboard();
+  const { activeModule, setActiveModule, role, unreadAlertCount } = useDashboard();
   const [collapsed, setCollapsed] = useState(false);
 
   return (

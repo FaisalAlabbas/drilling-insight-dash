@@ -1,17 +1,6 @@
 import { useDashboard } from "@/lib/dashboard-context";
 import { AlertsFeed } from "@/components/AlertsFeed";
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "recharts";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AlertCircle } from "lucide-react";

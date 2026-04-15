@@ -1,14 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -25,22 +22,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertTriangle, TrendingUp, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
-const baseUrl = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8000";
-
-const fetchModelMetrics = async () => {
-  const response = await fetch(`${baseUrl}/model/metrics`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch model metrics");
-  }
-  return response.json();
-};
+import { fetchModelMetrics } from "@/lib/api-service";
+import { predictDecision } from "@/lib/aiApi";
+import type { PredictResponse } from "@/lib/api-types";
 
 export function AIEvaluation() {
-  const [testResult, setTestResult] = useState<unknown>(null);
+  const [testResult, setTestResult] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const {
     data: modelMetrics,
@@ -54,18 +45,28 @@ export function AIEvaluation() {
   });
 
   // Per-class performance from API
-  const classMetrics = modelMetrics?.per_class_f1 ? 
-    Object.entries(modelMetrics.per_class_f1).map(([className, f1]) => ({
-      class: className,
-      f1: typeof f1 === 'number' ? f1 : 0,
-      support: className === 'Build' ? 3 : className === 'Drop' ? 4 : className === 'Hold' ? 21 : className === 'Turn Left' ? 2 : 1
-    })) : [
-    { class: "Build", f1: 0.75, support: 3 },
-    { class: "Drop", f1: 0.86, support: 4 },
-    { class: "Hold", f1: 0.86, support: 21 },
-    { class: "Turn Left", f1: 0.0, support: 2 },
-    { class: "Turn Right", f1: 0.0, support: 1 },
-  ];
+  const classMetrics = modelMetrics?.per_class_f1
+    ? Object.entries(modelMetrics.per_class_f1).map(([className, f1]) => ({
+        class: className,
+        f1: typeof f1 === "number" ? f1 : 0,
+        support:
+          className === "Build"
+            ? 3
+            : className === "Drop"
+              ? 4
+              : className === "Hold"
+                ? 21
+                : className === "Turn Left"
+                  ? 2
+                  : 1,
+      }))
+    : [
+        { class: "Build", f1: 0.75, support: 3 },
+        { class: "Drop", f1: 0.86, support: 4 },
+        { class: "Hold", f1: 0.86, support: 21 },
+        { class: "Turn Left", f1: 0.0, support: 2 },
+        { class: "Turn Right", f1: 0.0, support: 1 },
+      ];
 
   // Feature importance data for chart (placeholder - not provided by backend)
   const featureData = [
@@ -87,33 +88,27 @@ export function AIEvaluation() {
 
   const runTest = async () => {
     setLoading(true);
+    setTestError(null);
     try {
-      const response = await fetch(`${baseUrl}/predict`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          WOB_klbf: 35,
-          RPM_demo: 110,
-          ROP_ft_hr: 75,
-          PHIF: 0.22,
-          VSH: 0.32,
-          SW: 0.42,
-          KLOGH: 0.52,
-          Torque_kftlb: 3500,
-          Vibration_g: 0.35,
-          DLS_deg_per_100ft: 1.8,
-          Inclination_deg: 50,
-          Azimuth_deg: 105,
-          Formation_Class: "Limestone",
-        }),
+      const data = await predictDecision({
+        WOB_klbf: 35,
+        RPM_demo: 110,
+        ROP_ft_hr: 75,
+        PHIF: 0.22,
+        VSH: 0.32,
+        SW: 0.42,
+        KLOGH: 0.52,
+        Torque_kftlb: 3500,
+        Vibration_g: 0.35,
+        DLS_deg_per_100ft: 1.8,
+        Inclination_deg: 50,
+        Azimuth_deg: 105,
+        Formation_Class: "Limestone",
       });
-      const data = await response.json();
       setTestResult(data);
     } catch (error) {
-      console.error("Test failed:", error);
-      alert(
-        "Failed to connect to backend. Make sure the API server is running on port 8000."
-      );
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      setTestError(`Failed to connect to backend: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -204,7 +199,9 @@ export function AIEvaluation() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {modelMetrics.per_class_f1 ? Object.keys(modelMetrics.per_class_f1).length : "N/A"}
+                    {modelMetrics.per_class_f1
+                      ? Object.keys(modelMetrics.per_class_f1).length
+                      : "N/A"}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Steering commands</p>
                 </CardContent>
@@ -234,13 +231,17 @@ export function AIEvaluation() {
                       <div>
                         <p className="text-sm text-muted-foreground">Accuracy</p>
                         <p className="text-lg font-semibold">
-                          {modelMetrics.accuracy ? (modelMetrics.accuracy * 100).toFixed(1) + "%" : "N/A"}
+                          {modelMetrics.accuracy
+                            ? (modelMetrics.accuracy * 100).toFixed(1) + "%"
+                            : "N/A"}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Macro F1</p>
                         <p className="text-lg font-semibold">
-                          {modelMetrics.macro_f1 ? modelMetrics.macro_f1.toFixed(3) : "N/A"}
+                          {modelMetrics.macro_f1
+                            ? modelMetrics.macro_f1.toFixed(3)
+                            : "N/A"}
                         </p>
                       </div>
                       <div>
@@ -400,6 +401,13 @@ export function AIEvaluation() {
                     <Button onClick={runTest} disabled={loading} className="w-full">
                       {loading ? "Testing..." : "Run Test Prediction"}
                     </Button>
+
+                    {testError && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{testError}</AlertDescription>
+                      </Alert>
+                    )}
 
                     {testResult && (
                       <div className="space-y-4 mt-4">

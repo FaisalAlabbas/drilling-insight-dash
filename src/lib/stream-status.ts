@@ -1,5 +1,3 @@
-import type { TelemetryPacket } from "@/lib/api-types";
-
 /**
  * Stream connection status utilities
  */

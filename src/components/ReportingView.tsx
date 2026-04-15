@@ -1,7 +1,7 @@
 import { useDashboard } from "@/lib/dashboard-context";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Download, TrendingUp, AlertTriangle } from "lucide-react";
+import { Download, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SteeringCommand } from "@/lib/api-types";
 import {
@@ -14,11 +14,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from "recharts";
 
 export function ReportingView() {
-  const { decisions, alerts, telemetry, role } = useDashboard();
+  const { decisions, alerts, telemetry } = useDashboard();
   const [reportType, setReportType] = useState<"performance" | "safety" | "operations">(
     "performance"
   );
