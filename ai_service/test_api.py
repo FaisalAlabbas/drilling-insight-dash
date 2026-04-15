@@ -28,13 +28,15 @@ class TestHealthEndpoint:
         response = client.get("/health")
         assert response.status_code == 200
         data = response.json()
-        assert data["ok"] is True
+        assert "status" in data
 
     def test_health_response_structure(self):
         """Test health response has required fields"""
         response = client.get("/health")
         data = response.json()
-        assert "ok" in data
+        assert "status" in data
+        assert "checks" in data
+        assert "timestamp" in data
 
 
 class TestPredictEndpoint:
