@@ -8,7 +8,7 @@
     "dev:all": "concurrently \"npm run dev\" \"cd ai_service && python -m uvicorn api:app --reload --port 8001\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "lint": "eslint . --ext ts,tsx --max-warnings=40",
+    "lint": "eslint . --ext ts,tsx --max-warnings=25",
     "format": "prettier --write .",
     "check:format": "prettier --check .",
     "preview": "vite preview",
