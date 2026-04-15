@@ -8,7 +8,7 @@ The frontend has been refactored to use WebSocket-based telemetry streaming inst
 
 ### Backend (FastAPI)
 
-**Endpoint**: `ws://localhost:8000/telemetry/stream`
+**Endpoint**: `ws://localhost:8001/telemetry/stream`
 
 ```python
 @app.websocket("/telemetry/stream")
@@ -162,7 +162,7 @@ import { getStreamStatus } from "@/lib/stream-status";
 ### Server-side (.env)
 
 ```
-VITE_AI_BASE_URL=http://localhost:8000
+VITE_AI_BASE_URL=http://localhost:8001
 ```
 
 ### Client-side customization
@@ -184,7 +184,7 @@ const {
 ## Troubleshooting
 
 ### Connection Fails Immediately
-1. Check backend is running: `curl http://localhost:8000/health`
+1. Check backend is running: `curl http://localhost:8001/health`
 2. Check WebSocket URL in browser console
 3. Verify CORS configuration on server
 4. Check firewall/network settings

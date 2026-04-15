@@ -31,6 +31,10 @@ from database.schemas import (
 # Settings (SECRET_KEY is validated at startup — fails fast in production)
 from settings import settings
 
+# Dataset and logging helpers
+from dataset import load_controls, get_next_telemetry, get_data_quality
+from logging_config import setup_logging, log_prediction, log_model_load
+
 # Authentication setup
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
@@ -153,9 +157,6 @@ def require_role(required_role: str):
             )
         return current_user
     return role_checker
-from dataset import load_controls, get_next_telemetry, get_data_quality
-from logging_config import setup_logging, log_prediction, log_model_load
-from settings import settings
 
 # Setup structured logging
 logger = setup_logging(__name__, settings.LOG_LEVEL)
@@ -1093,4 +1094,4 @@ async def telemetry_stream(websocket: WebSocket, db = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)

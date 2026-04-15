@@ -86,12 +86,12 @@ print(f"All class probabilities: {result['all_classes']}")
 
 ```bash
 # Start the API server
-uvicorn api:app --host 0.0.0.0 --port 8000
+uvicorn api:app --host 0.0.0.0 --port 8001
 ```
 
 ```bash
 # Make a prediction request
-curl -X POST http://localhost:8000/predict \
+curl -X POST http://localhost:8001/predict \
   -H "Content-Type: application/json" \
   -d '{
     "WOB_klbf": 35,

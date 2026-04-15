@@ -6,10 +6,21 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from sqlalchemy import select, update, and_
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
 from ..models import User
 from ..schemas import UserCreate, UserUpdate
 from .base import BaseRepository
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _hash_password(plain: str) -> str:
+    return _pwd_context.hash(plain)
+
+
+def _verify_password(plain: str, hashed: str) -> bool:
+    return _pwd_context.verify(plain, hashed)
 
 class UserRepository(BaseRepository[User]):
     """Repository for user operations."""
@@ -39,13 +50,9 @@ class UserRepository(BaseRepository[User]):
         """Authenticate user with username and password."""
         try:
             user = self.get_by_username(username)
-            if user and user.is_active:
-                # In a real implementation, you'd verify the password hash
-                # For now, we'll do a simple check (demo purposes only)
-                if password == user.password_hash:  # This should be hashed comparison
-                    # Update last login
-                    self.update(user.id, {'last_login_at': datetime.now()})
-                    return user
+            if user and user.is_active and _verify_password(password, user.password_hash):
+                self.update(user.id, {'last_login_at': datetime.now()})
+                return user
             return None
         except Exception as e:
             self.session.rollback()
@@ -55,11 +62,7 @@ class UserRepository(BaseRepository[User]):
         """Create a new user with password hashing."""
         try:
             data = user_data.model_dump()
-
-            # In a real implementation, you'd hash the password
-            # For demo purposes, we'll store it as-is (NEVER do this in production)
-            data['password_hash'] = data.pop('password')
-
+            data['password_hash'] = _hash_password(data.pop('password'))
             return self.create(data)
         except Exception as e:
             self.session.rollback()
@@ -69,12 +72,14 @@ class UserRepository(BaseRepository[User]):
         """Update user information."""
         data = update_data.model_dump(exclude_unset=True)
 
-        # Handle password update
         if 'password' in data:
-            # In a real implementation, you'd hash the password
-            data['password_hash'] = data.pop('password')
+            data['password_hash'] = _hash_password(data.pop('password'))
 
         return self.update(user_id, data)
+
+    def change_password(self, user_id: str, new_password: str) -> Optional[User]:
+        """Change user's password."""
+        return self.update(user_id, {'password_hash': _hash_password(new_password)})
 
     def deactivate_user(self, user_id: str) -> Optional[User]:
         """Deactivate a user account."""
@@ -112,11 +117,6 @@ class UserRepository(BaseRepository[User]):
     def update_last_login(self, user_id: str) -> Optional[User]:
         """Update user's last login timestamp."""
         return self.update(user_id, {'last_login_at': datetime.now()})
-
-    def change_password(self, user_id: str, new_password: str) -> Optional[User]:
-        """Change user's password."""
-        # In a real implementation, you'd hash the password
-        return self.update(user_id, {'password_hash': new_password})
 
     def get_user_stats(self) -> Dict[str, Any]:
         """Get user statistics."""

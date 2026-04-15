@@ -108,7 +108,7 @@ def main():
     if not env_file.exists():
         log_info("Creating .env.local for frontend configuration...")
         with open(env_file, 'w') as f:
-            f.write("VITE_AI_BASE_URL=http://localhost:8000\n")
+            f.write("VITE_AI_BASE_URL=http://localhost:8001\n")
         log_success(".env.local created with API endpoint")
     
     # Step 5: Ready to start servers
@@ -118,15 +118,15 @@ def main():
     
     print(f"{BLUE}Backend (Python/FastAPI):{RESET}")
     print(f"  Command: cd ai_service && python -m uvicorn api:app --reload")
-    print(f"  URL:     http://localhost:8000")
-    print(f"  Docs:    http://localhost:8000/docs")
+    print(f"  URL:     http://localhost:8001")
+    print(f"  Docs:    http://localhost:8001/docs")
     print()
     print(f"{BLUE}Frontend (React/Vite):{RESET}")
     print(f"  Command: npm run dev")
     print(f"  URL:     http://localhost:5173")
     print()
     print(f"{YELLOW}To start everything:{RESET}")
-    print(f"  Terminal 1: cd {ai_service_dir.name} && python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000")
+    print(f"  Terminal 1: cd {ai_service_dir.name} && python -m uvicorn api:app --reload --host 0.0.0.0 --port 8001")
     print(f"  Terminal 2: npm run dev")
     print()
     print(f"{GREEN}✓ All systems ready!{RESET}\n")

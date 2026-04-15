@@ -8,7 +8,7 @@ Timestamp: 2026-04-06 15:51:00 UTC
 
 ```
 ✓ API Server: RUNNING
-  Location:   http://localhost:8000
+  Location:   http://localhost:8001
   Status:     Healthy
   Model:      Loaded (Random Forest)
   Controls:   16 parameters loaded from Excel
@@ -42,7 +42,7 @@ $body = @{
   Formation_Class="Limestone"
 } | ConvertTo-Json
 
-Invoke-WebRequest -Uri http://localhost:8000/predict `
+Invoke-WebRequest -Uri http://localhost:8001/predict `
   -Method POST `
   -ContentType "application/json" `
   -Body $body
@@ -100,9 +100,9 @@ WOB Preferred Range:      20-60 klbf
 
 ```powershell
 cd ai_service
-python -m uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn api:app --host 0.0.0.0 --port 8001 --reload
 # or from project root:
-python -m uvicorn ai_service.api:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn ai_service.api:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 **Terminal 2 - Frontend (Already Running)**
@@ -236,7 +236,7 @@ Current Observed:
 ### Test 1: Basic Prediction
 
 ```bash
-curl -X POST http://localhost:8000/predict \
+curl -X POST http://localhost:8001/predict \
   -H "Content-Type: application/json" \
   -d '{
     "WOB_klbf": 35,
@@ -258,18 +258,18 @@ curl -X POST http://localhost:8000/predict \
 ### Test 2: Health Check
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
 
 ### Test 3: Model Info
 
 ```bash
-curl http://localhost:8000/model-info
+curl http://localhost:8001/model-info
 ```
 
 ### Test 4: API Docs
 
-Open: http://localhost:8000/docs
+Open: http://localhost:8001/docs
 
 ## 🐛 DEBUGGING
 
@@ -301,7 +301,7 @@ sessionStorage; // Check session data
 
 - [x] Python installed and working
 - [x] ML model trained (recommendation_model.pkl exists)
-- [x] Backend API running on :8000
+- [x] Backend API running on :8001
 - [x] Frontend dev server running on :8081
 - [x] API endpoints responding correctly
 - [x] Health check passing

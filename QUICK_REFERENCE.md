@@ -2,7 +2,7 @@
 
 ## 🟢 Both Servers Running?
 
-- Backend: http://localhost:8000 (Uvicorn)
+- Backend: http://localhost:8001 (Uvicorn)
 - Frontend: http://localhost:8081 (Vite)
 - Dashboard: http://localhost:8081
 
@@ -75,7 +75,7 @@ drilling-insight-dash/
 
 ```powershell
 cd ai_service
-python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn api:app --reload --host 0.0.0.0 --port 8001
 ```
 
 **Terminal 2 - Frontend:**
@@ -96,14 +96,14 @@ python train.py
 
 ```powershell
 # Health check
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 
 # Single prediction
 $body = @{...} | ConvertTo-Json
-Invoke-WebRequest -Uri http://localhost:8000/predict -Method POST -Body $body
+Invoke-WebRequest -Uri http://localhost:8001/predict -Method POST -Body $body
 
 # API docs (interactive)
-Open http://localhost:8000/docs
+Open http://localhost:8001/docs
 ```
 
 ### VIEW DASHBOARD
@@ -152,7 +152,7 @@ CONTROLS = {
 File: `.env.local`
 
 ```
-VITE_API_URL=http://localhost:8000
+VITE_AI_BASE_URL=http://localhost:8001
 ```
 
 ## 🎯 Key Data Flows
@@ -265,10 +265,10 @@ Update dashboard + add to history
 | ------------------------ | ------------------------------------------------------------ |
 | Backend won't start      | `python -m pip install -r ai_service/requirements.txt`       |
 | Model not found          | `cd ai_service && python train.py`                           |
-| Port 8000 in use         | `netstat -ano \| findstr :8000` to find process              |
+| Port 8001 in use         | `netstat -ano \| findstr :8001` to find process              |
 | Port 8080 in use         | Vite auto-tries 8081, 8082, etc.                             |
 | API returns 500 error    | Check backend logs for error details                         |
-| Frontend can't reach API | Verify `.env.local` has `VITE_API_URL=http://localhost:8000` |
+| Frontend can't reach API | Verify `.env.local` has `VITE_AI_BASE_URL=http://localhost:8001` |
 | Alerts not persisting    | Check browser localStorage (F12 > Application)               |
 | Charts not rendering     | Clear browser cache, refresh page                            |
 
@@ -276,7 +276,7 @@ Update dashboard + add to history
 
 **Frontend → Backend:**
 
-- `src/lib/api-service.ts` → `ai_service/api.py:8000`
+- `src/lib/api-service.ts` → `ai_service/api.py:8001`
 - `src/lib/dashboard-context.tsx` → `getRecommendation()` from api-service
 - `src/components/LiveMonitoringView.tsx` → real-time predictions
 
@@ -321,9 +321,9 @@ Per-Class Performance:
 ## 🔗 Useful URLs
 
 - Dashboard: http://localhost:8081
-- Backend Docs: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
-- Model Info: http://localhost:8000/model-info
+- Backend Docs: http://localhost:8001/docs
+- Health Check: http://localhost:8001/health
+- Model Info: http://localhost:8001/model-info
 - AI Evaluation: http://localhost:8081/ai-evaluation
 
 ## 💾 Persistent Data

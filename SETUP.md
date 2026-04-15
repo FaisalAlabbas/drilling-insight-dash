@@ -22,7 +22,7 @@ This will:
 1. ✓ Install Python dependencies
 2. ✓ Train ML model (if needed)
 3. ✓ Configure frontend
-4. ✓ Launch backend server (http://localhost:8000)
+4. ✓ Launch backend server (http://localhost:8001)
 5. ✓ Launch frontend server (http://localhost:8080)
 6. ✓ Open dashboard in browser
 
@@ -34,7 +34,7 @@ This will:
 cd ai_service
 python -m pip install -r requirements.txt
 python train.py              # Only needed first time
-python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn api:app --reload --host 0.0.0.0 --port 8001
 ```
 
 **Terminal 2 - Frontend (React)**
@@ -58,8 +58,8 @@ python --version
 cd ai_service
 python -m pip install --upgrade -r requirements.txt
 
-# Check if port 8000 is free
-netstat -ano | findstr :8000
+# Check if port 8001 is free
+netstat -ano | findstr :8001
 ```
 
 ### Model not found
@@ -85,12 +85,12 @@ npm run dev
 ### API connection error
 
 ```powershell
-# 1. Verify backend is running on port 8000
-curl http://localhost:8000/health
+# 1. Verify backend is running on port 8001
+curl http://localhost:8001/health
 
 # 2. Check .env.local exists
 cat .env.local
-# Should contain: VITE_API_URL=http://localhost:8000
+# Should contain: VITE_AI_BASE_URL=http://localhost:8001
 
 # 3. Restart both servers in order: backend first, then frontend
 ```
@@ -100,7 +100,7 @@ cat .env.local
 ### Backend (Python/FastAPI)
 
 - **Location**: `ai_service/api.py`
-- **Port**: http://localhost:8000
+- **Port**: http://localhost:8001
 - **Endpoints**:
   - `POST /predict` - Get steering recommendation
   - `POST /batch-predict` - Batch predictions
@@ -198,7 +198,7 @@ CONTROLS = {
 ### Frontend Settings (`src/lib/api-service.ts`)
 
 ```typescript
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_AI_BASE_URL || "http://localhost:8001";
 ```
 
 ## 📈 Performance Targets
@@ -284,7 +284,7 @@ For production, consider:
 For issues or questions:
 
 1. Check the **Troubleshooting** section above
-2. Review backend logs: `http://localhost:8000/docs`
+2. Review backend logs: `http://localhost:8001/docs`
 3. Check browser console for frontend errors
 4. Verify all prerequisites are installed correctly
 

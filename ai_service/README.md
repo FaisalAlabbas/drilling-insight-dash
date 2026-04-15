@@ -25,15 +25,15 @@ Python FastAPI backend providing AI-powered steering recommendations for drillin
 4. **Run the service**
 
    ```powershell
-   python -m uvicorn api:app --reload --port 8000
+   python -m uvicorn api:app --reload --port 8001
    ```
 
 5. **Test endpoints**
-   - Health check: `curl http://localhost:8000/health`
-   - API docs: Open `http://localhost:8000/docs` in browser
+   - Health check: `curl http://localhost:8001/health`
+   - API docs: Open `http://localhost:8001/docs` in browser
    - Test prediction:
      ```powershell
-     curl -X POST http://localhost:8000/predict \
+     curl -X POST http://localhost:8001/predict \
        -H "Content-Type: application/json" \
        -d '{
          "WOB_klbf": 35.0,
@@ -84,7 +84,7 @@ The service supports both rule-based and ML-based recommendations. To use the ML
 
 4. **Start the service**
    ```powershell
-   python -m uvicorn api:app --reload --port 8000
+   python -m uvicorn api:app --reload --port 8001
    ```
    The API will automatically detect and use the trained model for predictions.
 

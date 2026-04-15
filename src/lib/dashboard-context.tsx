@@ -21,11 +21,11 @@ import {
   generateAlertsFromData,
   createManualAlert,
 } from "./mock-data";
-import { getRecommendation, checkBackendHealth } from "./api-service";
+import { getRecommendation, checkBackendHealth, fetchTelemetry } from "./api-service";
 import { useConfig } from "./configApi";
 import { DASHBOARD_MODULES, getAccessibleModules, hasAccess, type ModuleId } from "./dashboard-modules";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
-import { API_BASE_URL, IS_PRODUCTION } from "./config";
+import { IS_PRODUCTION } from "./config";
 
 type SidebarModule = ModuleId;
 
@@ -85,14 +85,15 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const { data: config } = useConfig();
 
   const [telemetry, setTelemetry] = useState<TelemetryPacket[]>(() =>
-    generateTelemetrySeries(180, 10000)
+    IS_PRODUCTION ? [] : generateTelemetrySeries(180, 10000)
   );
   const [decisions, setDecisions] = useState<DecisionRecord[]>(() =>
-    generateDecisionSeries(50)
+    IS_PRODUCTION ? [] : generateDecisionSeries(50)
   );
 
   // Initialize alerts from localStorage
   const [alerts, setAlerts] = useState<AlertEvent[]>(() => {
+    if (IS_PRODUCTION) return [];
     try {
       const saved = localStorage.getItem("drilling_alerts");
       return saved ? JSON.parse(saved) : generateAlerts(25);
@@ -185,10 +186,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         // Only try backend polling if WebSocket isn't available
         if (!wsConnected && backendAvailable) {
           try {
-            // Try to get telemetry from backend REST endpoint
-            const response = await fetch(`${API_BASE_URL}/telemetry/next`);
-            if (response.ok) {
-              const newPacket: TelemetryPacket = await response.json();
+            const newPacket = await fetchTelemetry();
+            if (newPacket) {
               setTelemetry((prev) => {
                 const next = [...prev, newPacket];
                 return next.length > 300 ? next.slice(-300) : next;

@@ -12,5 +12,5 @@ from api import app
 import uvicorn
 
 if __name__ == "__main__":
-    print("Starting AI Service on http://localhost:8000")
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    print("Starting AI Service on http://localhost:8001")
+    uvicorn.run(app, host="0.0.0.0", port=8001, reload=True)
