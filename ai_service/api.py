@@ -550,7 +550,7 @@ async def get_model_metrics(db = Depends(get_db)):
     try:
         # Return the loaded model metrics if available
         if model_available and model_metrics:
-            return model_metrics
+            return {**model_metrics, "available": True}
         else:
             # Fallback when the model is not loaded yet
             return {
@@ -882,11 +882,11 @@ async def predict(request: PredictRequest, db = Depends(get_db)) -> PredictRespo
         if gate_status == "REJECTED":
             alert_data = AlertCreate(
                 well_id="well_001",
-                severity=AlertSeverity.CRITICAL,
+                timestamp=datetime.utcnow(),
+                severity=AlertSeverity.critical,
                 title="AI Recommendation Rejected",
                 message=f"AI recommendation rejected due to {rejection_reason}",
-                status=AlertStatus.ACTIVE,
-                source="ai_prediction",
+                status=AlertStatus.active,
                 metadata={
                     "confidence": confidence,
                     "dls": request.DLS_deg_per_100ft,
@@ -901,11 +901,11 @@ async def predict(request: PredictRequest, db = Depends(get_db)) -> PredictRespo
         elif gate_status == "REDUCED":
             alert_data = AlertCreate(
                 well_id="well_001",
-                severity=AlertSeverity.WARNING,
+                timestamp=datetime.utcnow(),
+                severity=AlertSeverity.high,
                 title="AI Recommendation Modified",
                 message="AI recommendation accepted with reduced aggressiveness",
-                status=AlertStatus.ACTIVE,
-                source="ai_prediction",
+                status=AlertStatus.active,
                 metadata={
                     "confidence": confidence,
                     "dls": request.DLS_deg_per_100ft,
