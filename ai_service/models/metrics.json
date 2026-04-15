@@ -2,19 +2,133 @@
   "accuracy": 0.8064516129032258,
   "macro_f1": 0.4941558441558442,
   "weighted_f1": 0.7682237117720988,
-  "per_class_f1": {
-    "Hold": 0.8636363636363636,
-    "Build": 0.75,
-    "Turn Right": 0.0,
-    "Turn Left": 0.0,
-    "Drop": 0.8571428571428571
+  "precision": 0.4852173913043479,
+  "recall": 0.530952380952381,
+  "per_class_metrics": {
+    "Build": {
+      "precision": 0.6,
+      "recall": 1.0,
+      "f1": 0.75,
+      "support": 3
+    },
+    "Drop": {
+      "precision": 1.0,
+      "recall": 0.75,
+      "f1": 0.8571,
+      "support": 4
+    },
+    "Hold": {
+      "precision": 0.8261,
+      "recall": 0.9048,
+      "f1": 0.8636,
+      "support": 21
+    },
+    "Turn Left": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 2
+    },
+    "Turn Right": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 1
+    }
   },
-  "timestamp": "2026-04-12T20:59:21.945793",
+  "class_distribution": {
+    "Build": 75,
+    "Hold": 43,
+    "Drop": 17,
+    "Turn Right": 8,
+    "Turn Left": 8
+  },
+  "feature_importances": [
+    {
+      "name": "num__PHIF",
+      "importance": 0.1497
+    },
+    {
+      "name": "num__DLS_deg_per_100ft",
+      "importance": 0.1483
+    },
+    {
+      "name": "num__VSH",
+      "importance": 0.1231
+    },
+    {
+      "name": "num__Azimuth_deg",
+      "importance": 0.0994
+    },
+    {
+      "name": "num__Vibration_g",
+      "importance": 0.0915
+    },
+    {
+      "name": "num__Torque_kftlb",
+      "importance": 0.0692
+    },
+    {
+      "name": "num__WOB_klbf",
+      "importance": 0.0597
+    },
+    {
+      "name": "num__Inclination_deg",
+      "importance": 0.0596
+    },
+    {
+      "name": "num__ROP_ft_hr",
+      "importance": 0.0576
+    },
+    {
+      "name": "num__RPM_demo",
+      "importance": 0.0493
+    },
+    {
+      "name": "Formation_Class_Shale-prone",
+      "importance": 0.0312
+    },
+    {
+      "name": "num__SW",
+      "importance": 0.027
+    },
+    {
+      "name": "Formation_Class_Cleaner sand",
+      "importance": 0.0258
+    },
+    {
+      "name": "Formation_Class_Transition",
+      "importance": 0.0086
+    },
+    {
+      "name": "num__KLOGH",
+      "importance": 0.0
+    }
+  ],
+  "feature_names": [
+    "WOB_klbf",
+    "RPM_demo",
+    "ROP_ft_hr",
+    "PHIF",
+    "VSH",
+    "SW",
+    "KLOGH",
+    "Torque_kftlb",
+    "Vibration_g",
+    "DLS_deg_per_100ft",
+    "Inclination_deg",
+    "Azimuth_deg",
+    "Formation_Class"
+  ],
+  "algorithm": "RandomForest + CalibratedClassifierCV",
+  "n_estimators": 500,
+  "timestamp": "2026-04-16T02:07:50.860164",
   "model_version": "rf-cal-v1",
   "dataset_info": {
     "total_samples": 151,
     "train_samples": 120,
     "test_samples": 31,
-    "features": 15
+    "features": 15,
+    "split_ratio": 0.79
   }
 }

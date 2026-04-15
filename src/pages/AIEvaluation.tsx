@@ -22,11 +22,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, AlertCircle, Info } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchModelMetrics } from "@/lib/api-service";
 import { predictDecision } from "@/lib/aiApi";
 import type { PredictResponse } from "@/lib/api-types";
+
+const PIE_COLORS = ["#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316"];
+
+function MetricUnavailable({ label }: { label?: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+      <Info className="h-3 w-3 shrink-0" />
+      <span>{label || "Not available from current training run"}</span>
+    </div>
+  );
+}
 
 export function AIEvaluation() {
   const [testResult, setTestResult] = useState<PredictResponse | null>(null);
@@ -41,40 +52,40 @@ export function AIEvaluation() {
     queryKey: ["model-metrics"],
     queryFn: fetchModelMetrics,
     retry: 1,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 30000,
   });
 
-  // Per-class performance from API — only f1 and support are available
-  const classMetrics = modelMetrics?.per_class_f1
-    ? Object.entries(modelMetrics.per_class_f1).map(([className, f1]) => ({
+  // --- Derived data: per-class metrics table ---
+  const classMetrics = modelMetrics?.per_class_metrics
+    ? Object.entries(modelMetrics.per_class_metrics).map(([className, m]) => ({
         class: className,
-        f1: typeof f1 === "number" ? f1 : 0,
-        support:
-          modelMetrics.dataset_info?.test_samples
-            ? Math.round(
-                (className === "Hold" ? 21 : className === "Drop" ? 4 : className === "Build" ? 3 : className === "Turn Left" ? 2 : 1)
-              )
-            : 0,
+        precision: m.precision,
+        recall: m.recall,
+        f1: m.f1,
+        support: m.support,
       }))
     : [];
 
-  // Feature importance data for chart (placeholder - not provided by backend)
-  const featureData = [
-    { name: "PHIF (Porosity)", importance: "15.56" },
-    { name: "DLS (Dogleg Severity)", importance: "14.93" },
-    { name: "VSH (Shale Volume)", importance: "12.55" },
-    { name: "Azimuth", importance: "10.06" },
-    { name: "Vibration", importance: "8.63" },
-  ];
+  // --- Derived data: feature importance chart ---
+  const featureData = modelMetrics?.feature_importances ?? null;
 
-  // Class distribution (placeholder - using training data distribution)
-  const classDistribution = [
-    { name: "Build", value: 75, fill: "#10b981" },
-    { name: "Hold", value: 43, fill: "#f59e0b" },
-    { name: "Drop", value: 17, fill: "#ef4444" },
-    { name: "Turn Right", value: 8, fill: "#3b82f6" },
-    { name: "Turn Left", value: 8, fill: "#8b5cf6" },
-  ];
+  // --- Derived data: class distribution pie ---
+  const classDistribution = modelMetrics?.class_distribution
+    ? Object.entries(modelMetrics.class_distribution).map(([name, value], i) => ({
+        name,
+        value,
+        fill: PIE_COLORS[i % PIE_COLORS.length],
+      }))
+    : null;
+
+  // --- Derived data: feature names badges ---
+  const featureNames = modelMetrics?.feature_names ?? null;
+
+  // --- Derived data: split ratio ---
+  const splitRatio = modelMetrics?.dataset_info?.split_ratio;
+  const splitLabel = splitRatio != null
+    ? `${Math.round(splitRatio * 100)}/${Math.round((1 - splitRatio) * 100)}`
+    : null;
 
   const runTest = async () => {
     setLoading(true);
@@ -125,7 +136,8 @@ export function AIEvaluation() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Model not trained yet. Run <code>cd ai_service && python train.py</code> to
+              Unable to load model metrics. Ensure the backend is running and the model
+              has been trained. Run <code>cd ai_service && python train.py</code> to
               train the model.
             </AlertDescription>
           </Alert>
@@ -156,14 +168,34 @@ export function AIEvaluation() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Accuracy
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {modelMetrics.accuracy != null
+                      ? (modelMetrics.accuracy * 100).toFixed(1) + "%"
+                      : "N/A"}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Test set ({modelMetrics.dataset_info?.test_samples ?? "?"} samples)
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
                     Macro F1
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {modelMetrics.macro_f1.toFixed(3)}
+                    {modelMetrics.macro_f1 != null
+                      ? modelMetrics.macro_f1.toFixed(3)
+                      : "N/A"}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Macro average</p>
+                  <p className="text-xs text-muted-foreground mt-1">Unweighted average across classes</p>
                 </CardContent>
               </Card>
 
@@ -175,9 +207,11 @@ export function AIEvaluation() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {modelMetrics.dataset_info?.total_samples || "N/A"}
+                    {modelMetrics.dataset_info?.total_samples ?? "N/A"}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">Total samples</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Total samples (train: {modelMetrics.dataset_info?.train_samples ?? "?"})
+                  </p>
                 </CardContent>
               </Card>
 
@@ -189,8 +223,8 @@ export function AIEvaluation() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {modelMetrics.per_class_f1
-                      ? Object.keys(modelMetrics.per_class_f1).length
+                    {modelMetrics.per_class_metrics
+                      ? Object.keys(modelMetrics.per_class_metrics).length
                       : "N/A"}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Steering commands</p>
@@ -221,52 +255,60 @@ export function AIEvaluation() {
                       <div>
                         <p className="text-sm text-muted-foreground">Accuracy</p>
                         <p className="text-lg font-semibold">
-                          {modelMetrics.accuracy
+                          {modelMetrics.accuracy != null
                             ? (modelMetrics.accuracy * 100).toFixed(1) + "%"
                             : "N/A"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Macro F1</p>
+                        <p className="text-sm text-muted-foreground">Macro Precision</p>
                         <p className="text-lg font-semibold">
-                          {modelMetrics.macro_f1
-                            ? modelMetrics.macro_f1.toFixed(3)
+                          {modelMetrics.precision != null
+                            ? modelMetrics.precision.toFixed(3)
                             : "N/A"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Model Type</p>
-                        <p className="text-sm font-semibold">
-                          {modelMetrics.model_version || "Random Forest"}
+                        <p className="text-sm text-muted-foreground">Macro Recall</p>
+                        <p className="text-lg font-semibold">
+                          {modelMetrics.recall != null
+                            ? modelMetrics.recall.toFixed(3)
+                            : "N/A"}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Test Split</p>
-                        <p className="text-sm font-semibold">80/20</p>
+                        <p className="text-lg font-semibold">
+                          {splitLabel ?? "N/A"}
+                        </p>
                       </div>
                     </div>
 
                     <div className="mt-6">
-                      <h3 className="font-semibold mb-3">Class Distribution</h3>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                          <Pie
-                            data={classDistribution}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, value }) => `${name}: ${value}`}
-                            outerRadius={100}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {classDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <h3 className="font-semibold mb-3">Class Distribution (Full Dataset)</h3>
+                      {classDistribution ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie
+                              data={classDistribution}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, value }) => `${name}: ${value}`}
+                              outerRadius={100}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {classDistribution.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <MetricUnavailable label="Class distribution not available from training output" />
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -276,45 +318,48 @@ export function AIEvaluation() {
               <TabsContent value="features" className="space-y-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Top 10 Feature Importance</CardTitle>
+                    <CardTitle>Feature Importance</CardTitle>
                     <CardDescription>
                       Most influential drilling parameters in model decisions
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ResponsiveContainer width="100%" height={400}>
-                      <BarChart data={featureData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="importance" fill="#3b82f6" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {featureData && featureData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={featureData.slice(0, 10)}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={120} />
+                          <YAxis />
+                          <Tooltip
+                            formatter={(value: number) => [value.toFixed(4), "Importance"]}
+                          />
+                          <Bar dataKey="importance" fill="#3b82f6" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-64">
+                        <Info className="h-8 w-8 text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground text-sm text-center">
+                          Feature importance data not available from current training run.
+                          <br />
+                          Retrain the model to generate this data.
+                        </p>
+                      </div>
+                    )}
 
                     <div className="mt-6 space-y-2">
                       <h3 className="font-semibold">Input Features Used</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {[
-                          "WOB_klbf",
-                          "RPM_demo",
-                          "ROP_ft_hr",
-                          "PHIF",
-                          "VSH",
-                          "SW",
-                          "KLOGH",
-                          "Torque_kftlb",
-                          "Vibration_g",
-                          "DLS_deg_per_100ft",
-                          "Inclination_deg",
-                          "Azimuth_deg",
-                          "Formation_Class",
-                        ].map((feature) => (
-                          <Badge key={feature} variant="secondary">
-                            {feature}
-                          </Badge>
-                        ))}
-                      </div>
+                      {featureNames && featureNames.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {featureNames.map((feature) => (
+                            <Badge key={feature} variant="secondary">
+                              {feature}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <MetricUnavailable label="Feature list not available from training output" />
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -326,49 +371,56 @@ export function AIEvaluation() {
                   <CardHeader>
                     <CardTitle>Per-Class Performance</CardTitle>
                     <CardDescription>
-                      Detailed metrics for each steering command class
+                      Detailed metrics for each steering command class on the test set
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 px-2">Class</th>
-                            <th className="text-center py-2 px-2">F1-Score</th>
-                            <th className="text-center py-2 px-2">Support</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {classMetrics.length === 0 ? (
-                            <tr>
-                              <td colSpan={3} className="text-center py-4 text-muted-foreground">
-                                No per-class metrics available
-                              </td>
-                            </tr>
-                          ) : (
-                            classMetrics.map((metric, idx) => (
-                              <tr key={idx} className={idx % 2 === 0 ? "bg-muted/50" : ""}>
-                                <td className="py-2 px-2 font-medium">{metric.class}</td>
-                                <td className="text-center py-2 px-2">
-                                  {metric.f1.toFixed(2)}
-                                </td>
-                                <td className="text-center py-2 px-2">{metric.support}</td>
+                    {classMetrics.length === 0 ? (
+                      <MetricUnavailable label="Per-class metrics not available from current training run" />
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-2 px-2">Class</th>
+                                <th className="text-center py-2 px-2">Precision</th>
+                                <th className="text-center py-2 px-2">Recall</th>
+                                <th className="text-center py-2 px-2">F1-Score</th>
+                                <th className="text-center py-2 px-2">Support</th>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                            </thead>
+                            <tbody>
+                              {classMetrics.map((metric, idx) => (
+                                <tr key={idx} className={idx % 2 === 0 ? "bg-muted/50" : ""}>
+                                  <td className="py-2 px-2 font-medium">{metric.class}</td>
+                                  <td className="text-center py-2 px-2">
+                                    {metric.precision.toFixed(2)}
+                                  </td>
+                                  <td className="text-center py-2 px-2">
+                                    {metric.recall.toFixed(2)}
+                                  </td>
+                                  <td className="text-center py-2 px-2">
+                                    {metric.f1.toFixed(2)}
+                                  </td>
+                                  <td className="text-center py-2 px-2">{metric.support}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
 
-                    <Alert className="mt-4">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        Classes "Turn Left" and "Turn Right" have limited test samples and
-                        show low performance. Use caution when model predicts these
-                        classes.
-                      </AlertDescription>
-                    </Alert>
+                        {classMetrics.some((m) => m.support <= 2) && (
+                          <Alert className="mt-4">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              Some classes have very few test samples (support &le; 2).
+                              Per-class metrics for these classes are unreliable.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -468,30 +520,37 @@ export function AIEvaluation() {
                 <div className="space-y-2 text-sm">
                   <p>
                     <span className="font-medium">Algorithm:</span>{" "}
-                    Random Forest (Calibrated) — {modelMetrics.model_version || "unknown version"}
+                    {modelMetrics.algorithm || "Unknown"}{" "}
+                    {modelMetrics.n_estimators ? `(${modelMetrics.n_estimators} estimators)` : ""}
                   </p>
                   <p>
-                    <span className="font-medium">Training Strategy:</span>{" "}
-                    Temporal/spatial ordering (first 80% by depth)
+                    <span className="font-medium">Version:</span>{" "}
+                    {modelMetrics.model_version || "Unknown"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Training Split:</span>{" "}
+                    {splitLabel
+                      ? `${splitLabel} (${modelMetrics.dataset_info?.train_samples} train / ${modelMetrics.dataset_info?.test_samples} test)`
+                      : "N/A"}
                   </p>
                   <p>
                     <span className="font-medium">Input Features:</span>{" "}
-                    {modelMetrics.dataset_info?.features
+                    {modelMetrics.dataset_info?.features != null
                       ? `${modelMetrics.dataset_info.features} total`
-                      : "12 numerical + 1 categorical (13 total)"}
+                      : "N/A"}
                   </p>
                   <p>
-                    <span className="font-medium">Output:</span>{" "}
-                    {modelMetrics.per_class_f1
-                      ? `${Object.keys(modelMetrics.per_class_f1).length} steering command classes`
-                      : "5 steering command classes"}
+                    <span className="font-medium">Output Classes:</span>{" "}
+                    {modelMetrics.per_class_metrics
+                      ? Object.keys(modelMetrics.per_class_metrics).join(", ")
+                      : "N/A"}
                   </p>
-                  <p>
-                    <span className="font-medium">Status:</span>{" "}
-                    {modelMetrics.accuracy && modelMetrics.accuracy >= 0.7
-                      ? "Trained and loaded"
-                      : "Loaded — review per-class metrics before relying on predictions"}
-                  </p>
+                  {modelMetrics.timestamp && (
+                    <p>
+                      <span className="font-medium">Trained:</span>{" "}
+                      {new Date(modelMetrics.timestamp).toLocaleString()}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

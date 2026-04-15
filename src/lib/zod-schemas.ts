@@ -122,25 +122,42 @@ export type PredictResponse = z.infer<typeof PredictResponseSchema>;
 // Model Metrics Schemas
 // ============================================================================
 
+const PerClassMetricSchema = z.object({
+  precision: z.number(),
+  recall: z.number(),
+  f1: z.number(),
+  support: z.number(),
+});
+
+const FeatureImportanceSchema = z.object({
+  name: z.string(),
+  importance: z.number(),
+});
+
 export const ModelMetricsSchema = z.object({
   available: z.boolean(),
   message: z.string().optional(),
   model_loaded: z.boolean().optional(),
   model_version: z.string().optional(),
-  model_type: z.string().optional(),
+  algorithm: z.string().optional(),
+  n_estimators: z.number().optional(),
   accuracy: z.number().min(0).max(1).optional(),
   precision: z.number().min(0).max(1).optional(),
   recall: z.number().min(0).max(1).optional(),
   f1_score: z.number().min(0).max(1).optional(),
   macro_f1: z.number().min(0).max(1).optional(),
   weighted_f1: z.number().min(0).max(1).optional(),
-  per_class_f1: z.record(z.string(), z.number()).optional(),
+  per_class_metrics: z.record(z.string(), PerClassMetricSchema).optional(),
+  class_distribution: z.record(z.string(), z.number()).optional(),
+  feature_importances: z.array(FeatureImportanceSchema).nullable().optional(),
+  feature_names: z.array(z.string()).optional(),
   timestamp: z.string().optional(),
   dataset_info: z.object({
     total_samples: z.number(),
     train_samples: z.number(),
     test_samples: z.number(),
     features: z.number(),
+    split_ratio: z.number().optional(),
   }).optional(),
 });
 

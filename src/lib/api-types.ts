@@ -100,25 +100,42 @@ export interface PredictResponse {
 // Model Metrics Types
 // ============================================================================
 
+export interface PerClassMetric {
+  precision: number;
+  recall: number;
+  f1: number;
+  support: number;
+}
+
+export interface FeatureImportance {
+  name: string;
+  importance: number;
+}
+
 export interface ModelMetrics {
   available: boolean;
   message?: string;
   model_loaded?: boolean;
   model_version?: string;
-  model_type?: string;
+  algorithm?: string;
+  n_estimators?: number;
   accuracy?: number;
   precision?: number;
   recall?: number;
   f1_score?: number;
   macro_f1?: number;
   weighted_f1?: number;
-  per_class_f1?: Record<string, number>;
+  per_class_metrics?: Record<string, PerClassMetric>;
+  class_distribution?: Record<string, number>;
+  feature_importances?: FeatureImportance[] | null;
+  feature_names?: string[];
   timestamp?: string;
   dataset_info?: {
     total_samples: number;
     train_samples: number;
     test_samples: number;
     features: number;
+    split_ratio?: number;
   };
 }
 
