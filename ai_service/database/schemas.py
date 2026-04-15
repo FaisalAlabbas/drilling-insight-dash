@@ -23,6 +23,7 @@ class AlertSeverity(str, Enum):
 
 class GateOutcome(str, Enum):
     accepted = "ACCEPTED"
+    reduced = "REDUCED"
     rejected = "REJECTED"
 
 class ExecutionStatus(str, Enum):
