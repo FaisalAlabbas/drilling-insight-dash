@@ -25,6 +25,7 @@ def _require_secret_key() -> str:
         "your-secret-key-change-in-production",
         "your-super-secret-key-change-in-production",
         "REPLACE_WITH_STRONG_RANDOM_SECRET",
+        "GENERATE_WITH_OPENSSL_RAND_HEX_32",
     }
 
     if app_env == "production":

@@ -29,7 +29,7 @@ export function DashboardHeader() {
   return (
     <>
       {isBackendDegraded && (
-        <div className="bg-destructive/90 text-destructive-foreground flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium">
+        <div role="alert" className="bg-destructive/90 text-destructive-foreground flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
             Backend unreachable — live data is unavailable. Contact your system administrator.
@@ -37,7 +37,7 @@ export function DashboardHeader() {
         </div>
       )}
       {!isBackendDegraded && isMockData && (
-        <div className="bg-signal-yellow/20 text-signal-yellow border-b border-signal-yellow/30 flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium">
+        <div role="status" className="bg-signal-yellow/20 text-signal-yellow border-b border-signal-yellow/30 flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>Development mode — displaying simulated data (backend not connected)</span>
         </div>
