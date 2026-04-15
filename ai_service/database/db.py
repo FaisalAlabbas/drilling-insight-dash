@@ -10,8 +10,12 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Database URL from environment - use sync SQLite URL
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://drilling_user:drilling_password@localhost:5432/drilling_insight")
+# Database URL from environment
+# Default to SQLite for development, PostgreSQL for production
+import sys
+_APP_ENV = os.getenv("APP_ENV", "development").lower()
+_DEFAULT_DB = "sqlite:///drilling_insight.db" if _APP_ENV == "development" else "postgresql://drilling_user:drilling_password@localhost:5432/drilling_insight"
+DATABASE_URL = os.getenv("DATABASE_URL", _DEFAULT_DB)
 
 # Ensure SQLite uses sync driver for sync operations
 if DATABASE_URL.startswith("sqlite+aiosqlite://"):
@@ -131,7 +135,7 @@ def init_db():
     try:
         # Test connection
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
 
         # Create tables if they don't exist
         create_database()
