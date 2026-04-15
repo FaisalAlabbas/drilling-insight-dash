@@ -29,6 +29,7 @@ class GateOutcome(str, Enum):
 class ExecutionStatus(str, Enum):
     sent = "SENT"
     pending = "PENDING"
+    blocked = "BLOCKED"
     failed = "FAILED"
 
 class AlertStatus(str, Enum):

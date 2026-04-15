@@ -23,17 +23,26 @@ import { predictDecision, type PredictPayload } from "./aiApi";
 import { API_BASE_URL } from "./config";
 import { ZodSchema } from "zod";
 
+const FETCH_TIMEOUT_MS = 8000;
+
 /**
- * Reusable helper for fetch + JSON parse + schema validation
- * Provides consistent error handling and logging across all API endpoints
+ * Reusable helper for fetch + timeout + JSON parse + schema validation.
+ * Every data-fetch endpoint goes through here so timeout, error handling,
+ * and response parsing are consistent.
  */
 async function fetchAndValidate<T>(
   endpoint: string,
   schema: ZodSchema,
   functionName: string
 ): Promise<T | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch ${functionName}: ${response.statusText}`);
@@ -43,7 +52,10 @@ async function fetchAndValidate<T>(
     const validated = parseResponseVerbose<T>(schema, data, functionName);
     return validated;
   } catch (error) {
-    if (error instanceof Error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === "AbortError") {
+      console.error(`${functionName} timed out after ${FETCH_TIMEOUT_MS}ms`);
+    } else if (error instanceof Error) {
       console.error(`${functionName} failed: ${error.message}`);
     } else {
       console.error(`${functionName} failed with unknown error`);
@@ -125,9 +137,6 @@ export async function getRecommendation(
 }
 
 /**
- * Fetch configuration from backend with validation
- */
-/**
  * Fetch config from backend with validation
  */
 export async function fetchConfig(): Promise<ConfigResponse | null> {
@@ -171,14 +180,19 @@ export async function fetchModelMetrics(): Promise<ModelMetrics | null> {
   );
 }
 
+export type BackendHealthStatus = "healthy" | "degraded" | "unreachable";
+
 /**
- * Health check for backend with timeout
- * Returns true only if backend is fully healthy (not degraded/unhealthy)
+ * Health check for backend with timeout.
+ * Returns the real status so callers can distinguish:
+ *  - "healthy"     → everything works
+ *  - "degraded"    → backend is up but some subsystem (e.g. telemetry) is impaired
+ *  - "unreachable" → backend did not respond or returned unhealthy
  */
-export async function checkBackendHealth(): Promise<boolean> {
+export async function checkBackendHealth(): Promise<BackendHealthStatus> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(`${API_BASE_URL}/health`, {
       signal: controller.signal,
@@ -186,14 +200,16 @@ export async function checkBackendHealth(): Promise<boolean> {
 
     clearTimeout(timeoutId);
 
-    if (!response.ok || response.status !== 200) {
-      return false;
+    if (!response.ok) {
+      return "unreachable";
     }
 
-    // Parse JSON payload to check actual health status
     const health = await response.json() as { status?: string };
-    return health.status === "healthy";
+
+    if (health.status === "healthy") return "healthy";
+    if (health.status === "degraded") return "degraded";
+    return "unreachable"; // "unhealthy" or unexpected value
   } catch {
-    return false;
+    return "unreachable";
   }
 }

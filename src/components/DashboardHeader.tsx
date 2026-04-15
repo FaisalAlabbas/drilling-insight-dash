@@ -24,6 +24,7 @@ export function DashboardHeader() {
     decisions,
     isMockData,
     isBackendDegraded,
+    isBackendImpaired,
   } = useDashboard();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,7 +47,16 @@ export function DashboardHeader() {
           </span>
         </div>
       )}
-      {!isBackendDegraded && isMockData && (
+      {!isBackendDegraded && isBackendImpaired && (
+        <div className="bg-amber-600/80 text-white flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            Backend degraded — some subsystems are impaired. Model predictions
+            may still work.
+          </span>
+        </div>
+      )}
+      {!isBackendDegraded && !isBackendImpaired && isMockData && (
         <div className="bg-signal-yellow/20 text-signal-yellow border-b border-signal-yellow/30 flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>

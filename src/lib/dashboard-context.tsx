@@ -21,7 +21,7 @@ import {
   generateAlertsFromData,
   createManualAlert,
 } from "./mock-data";
-import { getRecommendation, checkBackendHealth, fetchTelemetry } from "./api-service";
+import { getRecommendation, checkBackendHealth, fetchTelemetry, type BackendHealthStatus } from "./api-service";
 import { useConfig } from "./configApi";
 import {
   DASHBOARD_MODULES,
@@ -31,6 +31,7 @@ import {
 } from "./dashboard-modules";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { IS_PRODUCTION } from "./config";
+import type { UserRole, EdgeHealth, SamplingRate } from "./types";
 
 type SidebarModule = ModuleId;
 
@@ -59,10 +60,12 @@ export interface DashboardContextType {
   setSelectedAlert: (a: AlertEvent | null) => void;
   drawerOpen: boolean;
   setDrawerOpen: (o: boolean) => void;
-  /** True when data is coming from mock generation (backend unreachable). */
+  /** True when telemetry shown is from mock generation, not a live backend. */
   isMockData: boolean;
   /** True when backend is unreachable and app is running in production mode. */
   isBackendDegraded: boolean;
+  /** True when backend is up but reports impaired subsystem (e.g. no telemetry data). */
+  isBackendImpaired: boolean;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);
@@ -76,11 +79,15 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [selectedDecision, setSelectedDecision] = useState<DecisionRecord | null>(null);
   const [selectedAlert, setSelectedAlert] = useState<AlertEvent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [backendAvailable, setBackendAvailable] = useState(false);
-  const [isMockData, setIsMockData] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<BackendHealthStatus>("unreachable");
+  // Initial state IS mock data — flag must start true since initial arrays are synthetic
+  const [isMockData, setIsMockData] = useState(true);
 
+  const backendAvailable = backendStatus !== "unreachable";
   // True only in production mode with unreachable backend
   const isBackendDegraded = IS_PRODUCTION && !backendAvailable;
+  // True when backend responds but reports impaired subsystem (e.g. no telemetry data)
+  const isBackendImpaired = backendStatus === "degraded";
 
   // Use config from backend
   const { data: config } = useConfig();
@@ -135,9 +142,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeModule, markAlertsAsRead]);
 
-  // Check backend health on mount
+  // Check backend health on mount and periodically (every 30 s) so the app
+  // can recover if the backend comes back online after an outage.
   useEffect(() => {
-    checkBackendHealth().then(setBackendAvailable);
+    checkBackendHealth().then(setBackendStatus);
+    const id = setInterval(() => {
+      checkBackendHealth().then(setBackendStatus);
+    }, 30_000);
+    return () => clearInterval(id);
   }, []);
 
   // Stream telemetry via WebSocket with fallback to mock generation
@@ -308,6 +320,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         hasModuleAccess,
         isMockData,
         isBackendDegraded,
+        isBackendImpaired,
       }}
     >
       {children}
