@@ -21,7 +21,7 @@ import {
   generateAlertsFromData,
   createManualAlert,
 } from "./mock-data";
-import { getRecommendation, checkBackendHealth } from "./api-service";
+import { getRecommendation, checkBackendHealth, fetchTelemetry } from "./api-service";
 import { useConfig } from "./configApi";
 import {
   DASHBOARD_MODULES,
@@ -30,7 +30,7 @@ import {
   type ModuleId,
 } from "./dashboard-modules";
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
-import { API_BASE_URL, IS_PRODUCTION } from "./config";
+import { IS_PRODUCTION } from "./config";
 
 type SidebarModule = ModuleId;
 
@@ -177,10 +177,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         // Only try backend polling if WebSocket isn't available
         if (!wsConnected && backendAvailable) {
           try {
-            // Try to get telemetry from backend REST endpoint using shared service
-            const response = await fetch(`${API_BASE_URL}/telemetry/next`);
-            if (response.ok) {
-              const newPacket: TelemetryPacket = await response.json();
+            // Use shared API service for consistent error handling and validation
+            const newPacket = await fetchTelemetry();
+            if (newPacket) {
               setTelemetry((prev) => {
                 const next = [...prev, newPacket];
                 return next.length > 300 ? next.slice(-300) : next;

@@ -21,6 +21,36 @@ import {
 } from "./zod-schemas";
 import { predictDecision, type PredictPayload } from "./aiApi";
 import { API_BASE_URL } from "./config";
+import { ZodSchema } from "zod";
+
+/**
+ * Reusable helper for fetch + JSON parse + schema validation
+ * Provides consistent error handling and logging across all API endpoints
+ */
+async function fetchAndValidate<T>(
+  endpoint: string,
+  schema: ZodSchema,
+  functionName: string
+): Promise<T | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${functionName}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const validated = parseResponseVerbose<T>(schema, data, functionName);
+    return validated;
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(`${functionName} failed: ${error.message}`);
+    } else {
+      console.error(`${functionName} failed with unknown error`);
+    }
+    return null;
+  }
+}
 
 /**
  * Map telemetry packet to model input format
@@ -97,129 +127,53 @@ export async function getRecommendation(
 /**
  * Fetch configuration from backend with validation
  */
+/**
+ * Fetch config from backend with validation
+ */
 export async function fetchConfig(): Promise<ConfigResponse | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/config`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch config: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Validate using Zod schema
-    const validated = parseResponseVerbose<ConfigResponse>(
-      ConfigResponseSchema,
-      data,
-      "fetchConfig"
-    );
-
-    return validated;
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Config fetch failed: ${error.message}`);
-    } else {
-      console.error("Config fetch failed with unknown error");
-    }
-    return null;
-  }
+  return fetchAndValidate<ConfigResponse>(
+    "/config",
+    ConfigResponseSchema,
+    "fetchConfig"
+  );
 }
 
 /**
  * Fetch telemetry data from backend with validation
  */
 export async function fetchTelemetry(): Promise<TelemetryPacket | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/telemetry/next`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch telemetry: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Validate using Zod schema
-    const validated = parseResponseVerbose<TelemetryPacket>(
-      TelemetryPacketSchema,
-      data,
-      "fetchTelemetry"
-    );
-
-    return validated;
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Telemetry fetch failed: ${error.message}`);
-    } else {
-      console.error("Telemetry fetch failed with unknown error");
-    }
-    return null;
-  }
+  return fetchAndValidate<TelemetryPacket>(
+    "/telemetry/next",
+    TelemetryPacketSchema,
+    "fetchTelemetry"
+  );
 }
 
 /**
  * Fetch data quality metrics from backend with validation
  */
 export async function fetchDataQuality(): Promise<DataQualityMetrics | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/telemetry/quality`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch data quality: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Validate using Zod schema
-    const validated = parseResponseVerbose<DataQualityMetrics>(
-      DataQualityMetricsSchema,
-      data,
-      "fetchDataQuality"
-    );
-
-    return validated;
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Data quality fetch failed: ${error.message}`);
-    } else {
-      console.error("Data quality fetch failed with unknown error");
-    }
-    return null;
-  }
+  return fetchAndValidate<DataQualityMetrics>(
+    "/telemetry/quality",
+    DataQualityMetricsSchema,
+    "fetchDataQuality"
+  );
 }
 
 /**
  * Fetch model metrics from backend with validation
  */
 export async function fetchModelMetrics(): Promise<ModelMetrics | null> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/model/metrics`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch model metrics: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // Validate using Zod schema
-    const validated = parseResponseVerbose<ModelMetrics>(
-      ModelMetricsSchema,
-      data,
-      "fetchModelMetrics"
-    );
-
-    return validated;
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(`Model metrics fetch failed: ${error.message}`);
-    } else {
-      console.error("Model metrics fetch failed with unknown error");
-    }
-    return null;
-  }
+  return fetchAndValidate<ModelMetrics>(
+    "/model/metrics",
+    ModelMetricsSchema,
+    "fetchModelMetrics"
+  );
 }
 
 /**
  * Health check for backend with timeout
+ * Returns true only if backend is fully healthy (not degraded/unhealthy)
  */
 export async function checkBackendHealth(): Promise<boolean> {
   try {
@@ -231,7 +185,14 @@ export async function checkBackendHealth(): Promise<boolean> {
     });
 
     clearTimeout(timeoutId);
-    return response.ok && response.status === 200;
+
+    if (!response.ok || response.status !== 200) {
+      return false;
+    }
+
+    // Parse JSON payload to check actual health status
+    const health = await response.json() as { status?: string };
+    return health.status === "healthy";
   } catch {
     return false;
   }

@@ -1,15 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ConfigResponse } from "./api-types";
-import { ConfigResponseSchema } from "./zod-schemas";
-import { API_BASE_URL } from "./config";
+import { fetchConfig } from "./api-service";
 
 export const getConfig = async (): Promise<ConfigResponse> => {
-  const response = await fetch(`${API_BASE_URL}/config`);
-  if (!response.ok) {
+  const config = await fetchConfig();
+  if (!config) {
     throw new Error("Failed to fetch config");
   }
-  const json = await response.json();
-  return ConfigResponseSchema.parse(json);
+  return config;
 };
 
 export const useConfig = () => {

@@ -19,7 +19,7 @@ A real-time drilling operations monitoring system with AI-powered decision suppo
 - **Frontend**: React 18 + TypeScript + Vite
 - **UI Framework**: Tailwind CSS + shadcn/ui components
 - **Backend**: FastAPI (Python) with Uvicorn server
-- **AI/ML**: Rule-based decision engine with configurable thresholds
+- **AI/ML**: Random Forest model with rule-based fallback (automatically loaded on startup)
 - **Data Processing**: Pandas + OpenPyXL for Excel dataset integration
 - **API Communication**: RESTful APIs with React Query for state management
 - **Deployment**: Node.js for frontend build, Python virtual environment for backend
@@ -140,9 +140,16 @@ python -m uvicorn api:app --reload --port 8001
 - **Split**: 80/20 temporal (by depth order)
 - **Calibration**: Sigmoid method for confidence scores
 
-### Fallback Behavior
+### Model Behavior and Availability
 
-If no trained model is available, the system automatically falls back to rule-based recommendations while maintaining all safety gates and data quality features.
+The backend automatically loads the trained Random Forest model on startup. Key behaviors:
+
+- **Model Available**: AI predictions use the trained model with confidence scores and calibration
+- **Model Missing**: System falls back to rule-based recommendations while maintaining all safety gates
+- **Degraded Backend**: If database or model is unavailable but app is in production, no synthetic data is generated; operators see true degraded state
+- **Development Mode**: If backend is unavailable and app is in development, mock data is generated for convenience
+
+Check the AI Evaluation page to verify which mode is active and view model metrics (accuracy, F1 scores, per-class performance).
 
 ### Running Frontend + Backend Together
 
@@ -168,7 +175,7 @@ The backend provides REST API endpoints for AI predictions, data streaming, and 
 
 ### Key Endpoints
 
-- `GET /health` - System health check
+- `GET /health` - System health check (returns "healthy"/"degraded"/"unhealthy" status)
 - `GET /config` - Operational limits and thresholds configuration
 - `GET /telemetry/next` - Next telemetry packet from dataset
 - `GET /telemetry/quality` - Data quality metrics and statistics
@@ -284,10 +291,13 @@ These are loaded from `ai_service/models/rss_dashboard_dataset_built_recalc.xlsx
 
 **Backend Connection Issues**
 
-- Backend has 15-second timeout for API calls
-- If backend is unresponsive, frontend automatically falls back to mock recommendations
+- Prediction requests have a 15-second timeout; other API calls use standard error handling
+- Health check uses 5-second timeout and reads the JSON status field (healthy/degraded/unhealthy)
+- If backend is unresponsive or degraded:
+  - Frontend in **production mode**: Shows actual degraded state, no synthetic data generated
+  - Frontend in **development mode**: Falls back to generated mock data for convenience
 - Check frontend browser console for detailed error messages
-- Review backend logs at startup for model loading status
+- Review backend logs at startup for model loading status and any errors
 
 ### Getting Help
 
@@ -354,6 +364,24 @@ The frontend will display "Model Not Available" in the AI Evaluation tab, but:
 - Safety gates function correctly
 - Rules-based steering recommendations are provided
 - No dataset or training required for development
+
+### Frontend Routing and Deployment
+
+The application uses React Router with **HashRouter** for static hosting compatibility:
+
+```
+http://localhost:8080/            → Live Dashboard
+http://localhost:8080/#/          → Live Dashboard (hash syntax)
+http://localhost:8080/#/ai-evaluation → AI Model Evaluation
+http://localhost:8080/#/data-quality  → Data Quality Metrics
+http://localhost:8080/#/reporting     → Reporting & Analytics
+```
+
+**Why HashRouter?** 
+- Uses the URL hash syntax (`#/`) instead of server-side routes
+- Works without server-side routing configuration
+- Suitable for static hosting (GitHub Pages, S3, etc.)
+- SPA remains fully functional with page refresh on any route
 
 ### Code Quality Standards
 

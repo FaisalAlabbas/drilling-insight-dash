@@ -56,7 +56,12 @@ async function fetchWithTimeout(
     return response;
   } catch (error) {
     clearTimeout(timeoutId);
-    if (error instanceof TypeError && error.name === "AbortError") {
+    // Check for AbortError (timeout) - AbortError can be a DOMException or TypeError
+    if (
+      error instanceof Error &&
+      (error.name === "AbortError" ||
+        (error instanceof TypeError && error.message.includes("aborted")))
+    ) {
       throw new APIError(
         "TIMEOUT",
         `Request timed out after ${timeoutMs}ms. Backend may be unavailable.`
