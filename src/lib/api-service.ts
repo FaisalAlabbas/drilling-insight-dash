@@ -89,13 +89,13 @@ export function mapTelemetryToModelInput(telemetry: TelemetryPacket): PredictPay
     DLS_deg_per_100ft: telemetry.dls_deg_100ft,
     Inclination_deg: telemetry.inclination_deg,
     Azimuth_deg: telemetry.azimuth_deg,
-    // Set formation class based on inclination
+    // Set formation class based on VSH (shale volume) — matches model training classes
     Formation_Class:
-      telemetry.inclination_deg > 60
-        ? "Sandstone"
-        : telemetry.inclination_deg > 30
-          ? "Limestone"
-          : "Shale",
+      telemetry.vsh > 0.45
+        ? "Shale-prone"
+        : telemetry.vsh > 0.25
+          ? "Transition"
+          : "Cleaner sand",
     // Include optional fields from telemetry if available
     Depth_ft: telemetry.depth_ft,
   };

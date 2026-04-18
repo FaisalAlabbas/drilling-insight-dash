@@ -36,7 +36,7 @@ export function generateTelemetryPacket(timestamp: Date): TelemetryPacket {
   azimuthDrift = ((azimuthDrift % 360) + 360) % 360;
 
   const vibration = Math.random() < 0.05 ? rand(4.5, 6.5) : rand(0.2, 3.5);
-  const formationTypes = ["sandstone", "shale", "limestone", "dolomite", "chalk"];
+  const formationTypes = ["Cleaner sand", "Transition", "Shale-prone"];
 
   return {
     timestamp: timestamp.toISOString(),
@@ -98,9 +98,9 @@ function generateFeatureVector(packets: TelemetryPacket[]): FeatureVector {
 }
 
 const COMMANDS: SteeringCommand[] = [
-  "No Change",
-  "Move Upward",
-  "Move Downward",
+  "Hold",
+  "Build",
+  "Drop",
   "Turn Left",
   "Turn Right",
 ];

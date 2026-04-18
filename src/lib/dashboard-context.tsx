@@ -22,6 +22,7 @@ import {
   createManualAlert,
 } from "./mock-data";
 import { getRecommendation, checkBackendHealth, fetchTelemetry, type BackendHealthStatus } from "./api-service";
+import { API_BASE_URL } from "./config";
 import { useConfig } from "./configApi";
 import {
   DASHBOARD_MODULES,
@@ -66,6 +67,14 @@ export interface DashboardContextType {
   isBackendDegraded: boolean;
   /** True when backend is up but reports impaired subsystem (e.g. no telemetry data). */
   isBackendImpaired: boolean;
+  /** JWT auth token for admin API calls. */
+  authToken: string | null;
+  /** Authenticated username, or null when not logged in. */
+  authUser: string | null;
+  /** Log in with username/password. Returns true on success. */
+  login: (username: string, password: string) => Promise<boolean>;
+  /** Log out and clear token. */
+  logout: () => void;
 }
 
 const DashboardContext = createContext<DashboardContextType | null>(null);
@@ -82,6 +91,47 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [backendStatus, setBackendStatus] = useState<BackendHealthStatus>("unreachable");
   // Initial state IS mock data — flag must start true since initial arrays are synthetic
   const [isMockData, setIsMockData] = useState(true);
+  // Auth state
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authUser, setAuthUser] = useState<string | null>(null);
+
+  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json() as { access_token: string; token_type: string };
+      setAuthToken(data.access_token);
+      setAuthUser(username);
+
+      // Fetch the user's role from the backend and update context
+      try {
+        const meRes = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${data.access_token}` },
+        });
+        if (meRes.ok) {
+          const me = await meRes.json() as { role: string };
+          // Capitalize first letter to match frontend role type
+          const capitalizedRole = me.role.charAt(0).toUpperCase() + me.role.slice(1);
+          setRole(capitalizedRole as UserRole);
+        }
+      } catch {
+        // Non-fatal: role stays as-is
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    setAuthToken(null);
+    setAuthUser(null);
+  }, []);
 
   const backendAvailable = backendStatus !== "unreachable";
   // True only in production mode with unreachable backend
@@ -321,6 +371,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         isMockData,
         isBackendDegraded,
         isBackendImpaired,
+        authToken,
+        authUser,
+        login,
+        logout,
       }}
     >
       {children}

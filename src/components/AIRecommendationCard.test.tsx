@@ -21,7 +21,7 @@ const mockDecision: DecisionRecord = {
     trend_azimuth: 0.2,
     instability_proxy: 0.3,
   },
-  steering_command: "Move Upward" as const,
+  steering_command: "Build" as const,
   confidence_score: 0.85,
   gate_outcome: "ACCEPTED" as const,
   rejection_reason: null,
@@ -127,7 +127,7 @@ describe("AIRecommendationCard", () => {
 
   it("renders steering command", () => {
     render(<AIRecommendationCard />);
-    expect(screen.getByText("Move Upward")).toBeInTheDocument();
+    expect(screen.getByText("Build")).toBeInTheDocument();
   });
 
   it("returns null when no decisions exist", () => {

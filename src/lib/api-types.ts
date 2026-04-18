@@ -63,9 +63,9 @@ export interface ConfigResponse {
 // ============================================================================
 
 export type SteeringCommand =
-  | "No Change"
-  | "Move Upward"
-  | "Move Downward"
+  | "Hold"
+  | "Build"
+  | "Drop"
   | "Turn Left"
   | "Turn Right";
 

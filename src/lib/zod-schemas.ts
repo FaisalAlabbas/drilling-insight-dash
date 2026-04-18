@@ -73,9 +73,9 @@ export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;
 // ============================================================================
 
 export const SteeringCommandSchema = z.enum([
-  "No Change",
-  "Move Upward",
-  "Move Downward",
+  "Hold",
+  "Build",
+  "Drop",
   "Turn Left",
   "Turn Right",
 ]);

@@ -205,7 +205,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -273,13 +273,13 @@ class TelemetryResponse(BaseModel):
     azimuth_deg: float
     rop_ft_hr: float
     dls_deg_100ft: float
-    gamma_gapi: float
-    resistivity_ohm_m: float
-    phif: float
-    vsh: float
-    sw: float
-    klogh: float
-    formation_class: str
+    gamma_gapi: float = 0.0
+    resistivity_ohm_m: float = 0.0
+    phif: float = 0.0
+    vsh: float = 0.0
+    sw: float = 0.0
+    klogh: float = 0.0
+    formation_class: str = "Unknown"
 
 class DataQualityResponse(BaseModel):
     total_rows: int
@@ -404,30 +404,42 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
     """Get current user information"""
     return current_user
 
+def _cfg_float(raw_config: dict, key: str, default=0.0) -> float:
+    """Unwrap config value — DB stores JSON dicts like {"value": X}."""
+    v = raw_config.get(key, default)
+    if isinstance(v, dict):
+        return float(v.get("value", default))
+    return float(v)
+
+
+def _build_limits(raw_config: dict) -> Limits:
+    """Build Limits object from raw config dict, handling nested JSON values."""
+    c = lambda key, default=0.0: _cfg_float(raw_config, key, default)
+    return Limits(
+        confidence_reject_threshold=c("alert_threshold_critical", 0.3),
+        confidence_reduce_threshold=c("alert_threshold_high", 0.5),
+        dls_reject_threshold=c("dls_reject_threshold", 3.0),
+        dls_reduce_threshold=c("dls_reduce_threshold", 2.0),
+        vibration_reject_threshold=c("vibration_reject_threshold", 0.5),
+        vibration_reduce_threshold=c("vibration_reduce_threshold", 0.3),
+        max_vibration_g=c("max_vibration_g", 0.5),
+        max_dls_deg_100ft=c("max_dls_deg_100ft", 3.0),
+        wob_range=[c("wob_min", 20), c("wob_max", 60)],
+        torque_range=[c("torque_min", 0), c("torque_max", 50)],
+        rpm_range=[c("rpm_min", 50), c("rpm_max", 300)],
+    )
+
+
 @app.get("/config", response_model=ConfigResponse)
 async def get_config(db = Depends(get_db)):
     """Get configuration and limits"""
     try:
         config_repo = ConfigRepository(db)
-        config_data = config_repo.get_current_config()
-
-        # Convert database config to response format
-        limits = Limits(
-            confidence_reject_threshold=float(config_data.get("alert_threshold_critical", 0.3)),
-            confidence_reduce_threshold=float(config_data.get("alert_threshold_high", 0.5)),
-            dls_reject_threshold=float(config_data.get("dls_reject_threshold", 3.0)),
-            dls_reduce_threshold=float(config_data.get("dls_reduce_threshold", 2.0)),
-            vibration_reject_threshold=float(config_data.get("vibration_reject_threshold", 0.5)),
-            vibration_reduce_threshold=float(config_data.get("vibration_reduce_threshold", 0.3)),
-            max_vibration_g=float(config_data.get("max_vibration_g", 0.5)),
-            max_dls_deg_100ft=float(config_data.get("max_dls_deg_100ft", 3.0)),
-            wob_range=[float(config_data.get("wob_min", 20)), float(config_data.get("wob_max", 60))],
-            torque_range=[float(config_data.get("torque_min", 0)), float(config_data.get("torque_max", 50))],
-            rpm_range=[float(config_data.get("rpm_min", 50)), float(config_data.get("rpm_max", 300))],
-        )
+        raw_config = config_repo.get_current_config()
+        limits = _build_limits(raw_config)
 
         return ConfigResponse(
-            sampling_rate_hz=float(config_data.get("telemetry_collection_interval", 1.0)),
+            sampling_rate_hz=_cfg_float(raw_config, "telemetry_collection_interval", 1.0),
             limits=limits,
             units={
                 "wob": "klbf",
@@ -457,22 +469,15 @@ async def get_next_telemetry_endpoint(db = Depends(get_db)):
 
         return TelemetryResponse(
             timestamp=latest_packet.timestamp.isoformat(),
-            depth_ft=latest_packet.depth,
-            wob_klbf=latest_packet.wob,
-            torque_kftlb=latest_packet.torque,
-            rpm=latest_packet.rpm,
-            vibration_g=latest_packet.vibration,
-            inclination_deg=latest_packet.inclination,
-            azimuth_deg=latest_packet.azimuth,
-            rop_ft_hr=latest_packet.rop,
-            dls_deg_100ft=latest_packet.dls,
-            gamma_gapi=latest_packet.gamma_ray,
-            resistivity_ohm_m=latest_packet.resistivity,
-            phif=latest_packet.porosity,
-            vsh=latest_packet.volume_shale,
-            sw=latest_packet.water_saturation,
-            klogh=latest_packet.permeability,
-            formation_class=latest_packet.formation_type or "Unknown"
+            depth_ft=latest_packet.depth_ft or 0.0,
+            wob_klbf=latest_packet.wob_klbf or 0.0,
+            torque_kftlb=latest_packet.torque_kftlb or 0.0,
+            rpm=latest_packet.rpm or 0.0,
+            vibration_g=latest_packet.vibration_g or 0.0,
+            inclination_deg=latest_packet.inclination_deg or 0.0,
+            azimuth_deg=latest_packet.azimuth_deg or 0.0,
+            rop_ft_hr=latest_packet.rop_ft_hr or 0.0,
+            dls_deg_100ft=latest_packet.dls_deg_100ft or 0.0,
         )
     except Exception as e:
         logger.error(f"Telemetry retrieval error: {e}")
@@ -636,27 +641,13 @@ async def predict_streaming(request: PredictRequest, current_user: User, db = De
         # Get config for thresholds
         config_repo = ConfigRepository(db)
         config_data = config_repo.get_current_config()
-
-        # Create limits object from database config
-        limits = Limits(
-            confidence_reject_threshold=float(config_data.get("alert_threshold_critical", 0.3)),
-            confidence_reduce_threshold=float(config_data.get("alert_threshold_high", 0.5)),
-            dls_reject_threshold=float(config_data.get("dls_reject_threshold", 3.0)),
-            dls_reduce_threshold=float(config_data.get("dls_reduce_threshold", 2.0)),
-            vibration_reject_threshold=float(config_data.get("vibration_reject_threshold", 0.5)),
-            vibration_reduce_threshold=float(config_data.get("vibration_reduce_threshold", 0.3)),
-            max_vibration_g=float(config_data.get("max_vibration_g", 0.5)),
-            max_dls_deg_100ft=float(config_data.get("max_dls_deg_100ft", 3.0)),
-            wob_range=[float(config_data.get("wob_min", 20)), float(config_data.get("wob_max", 60))],
-            torque_range=[float(config_data.get("torque_min", 0)), float(config_data.get("torque_max", 50))],
-            rpm_range=[float(config_data.get("rpm_min", 50)), float(config_data.get("rpm_max", 300))],
-        )
+        limits = _build_limits(config_data)
 
         # Calculate recommendation and confidence (same logic as main predict function)
         if model_available and ml_model is not None:
             model_version = "rf-cal-v1"
             input_data = pd.DataFrame([{
-                'Formation_Class': request.Formation_Class or 'Sandstone',
+                'Formation_Class': request.Formation_Class or 'Cleaner sand',
                 'WOB_klbf': request.WOB_klbf,
                 'RPM_demo': request.RPM_demo,
                 'ROP_ft_hr': request.ROP_ft_hr,
@@ -747,35 +738,20 @@ async def predict(request: PredictRequest, db = Depends(get_db)) -> PredictRespo
         # Get config for thresholds
         config_repo = ConfigRepository(db)
         config_data = config_repo.get_current_config()
-
-        # Create limits object from database config
-        limits = Limits(
-            confidence_reject_threshold=float(config_data.get("alert_threshold_critical", 0.3)),
-            confidence_reduce_threshold=float(config_data.get("alert_threshold_high", 0.5)),
-            dls_reject_threshold=float(config_data.get("dls_reject_threshold", 3.0)),
-            dls_reduce_threshold=float(config_data.get("dls_reduce_threshold", 2.0)),
-            vibration_reject_threshold=float(config_data.get("vibration_reject_threshold", 0.5)),
-            vibration_reduce_threshold=float(config_data.get("vibration_reduce_threshold", 0.3)),
-            max_vibration_g=float(config_data.get("max_vibration_g", 0.5)),
-            max_dls_deg_100ft=float(config_data.get("max_dls_deg_100ft", 3.0)),
-            wob_range=[float(config_data.get("wob_min", 20)), float(config_data.get("wob_max", 60))],
-            torque_range=[float(config_data.get("torque_min", 0)), float(config_data.get("torque_max", 50))],
-            rpm_range=[float(config_data.get("rpm_min", 50)), float(config_data.get("rpm_max", 300))],
-        )
+        limits = _build_limits(config_data)
 
         # If Depth_ft provided, lookup formation data from telemetry database
         if request.Depth_ft is not None:
             telemetry_repo = TelemetryRepository(db)
-            # Get telemetry data near the requested depth
             recent_telemetry = telemetry_repo.get_latest_by_well("well_001", limit=10)
             if recent_telemetry:
-                # Use the most recent telemetry for formation data
                 latest_packet = recent_telemetry[0]
-                request.PHIF = request.PHIF if request.PHIF is not None else latest_packet.porosity
-                request.VSH = request.VSH if request.VSH is not None else latest_packet.volume_shale
-                request.SW = request.SW if request.SW is not None else latest_packet.water_saturation
-                request.KLOGH = request.KLOGH if request.KLOGH is not None else latest_packet.permeability
-                request.Formation_Class = request.Formation_Class or latest_packet.formation_type
+                # Use defaults for geological properties not stored in telemetry DB
+                request.PHIF = request.PHIF if request.PHIF is not None else 0.15
+                request.VSH = request.VSH if request.VSH is not None else 0.2
+                request.SW = request.SW if request.SW is not None else 0.3
+                request.KLOGH = request.KLOGH if request.KLOGH is not None else 100.0
+                request.Formation_Class = request.Formation_Class or "Sandstone"
 
         # Calculate recommendation and confidence
         if model_available and ml_model is not None:
@@ -784,7 +760,7 @@ async def predict(request: PredictRequest, db = Depends(get_db)) -> PredictRespo
 
             # Prepare input data in correct order
             input_data = pd.DataFrame([{
-                'Formation_Class': request.Formation_Class or 'Sandstone',
+                'Formation_Class': request.Formation_Class or 'Cleaner sand',
                 'WOB_klbf': request.WOB_klbf,
                 'RPM_demo': request.RPM_demo,
                 'ROP_ft_hr': request.ROP_ft_hr,
@@ -990,22 +966,15 @@ async def telemetry_stream(websocket: WebSocket, db = Depends(get_db)):
                         # Send telemetry data
                         telemetry_data = {
                             "timestamp": latest_packet.timestamp.isoformat(),
-                            "depth_ft": latest_packet.depth,
-                            "wob_klbf": latest_packet.wob,
-                            "torque_kftlb": latest_packet.torque,
-                            "rpm": latest_packet.rpm,
-                            "vibration_g": latest_packet.vibration,
-                            "inclination_deg": latest_packet.inclination,
-                            "azimuth_deg": latest_packet.azimuth,
-                            "rop_ft_hr": latest_packet.rop,
-                            "dls_deg_100ft": latest_packet.dls,
-                            "gamma_gapi": latest_packet.gamma_ray,
-                            "resistivity_ohm_m": latest_packet.resistivity,
-                            "phif": latest_packet.porosity,
-                            "vsh": latest_packet.volume_shale,
-                            "sw": latest_packet.water_saturation,
-                            "klogh": latest_packet.permeability,
-                            "formation_class": latest_packet.formation_type or "Unknown"
+                            "depth_ft": latest_packet.depth_ft or 0.0,
+                            "wob_klbf": latest_packet.wob_klbf or 0.0,
+                            "torque_kftlb": latest_packet.torque_kftlb or 0.0,
+                            "rpm": latest_packet.rpm or 0.0,
+                            "vibration_g": latest_packet.vibration_g or 0.0,
+                            "inclination_deg": latest_packet.inclination_deg or 0.0,
+                            "azimuth_deg": latest_packet.azimuth_deg or 0.0,
+                            "rop_ft_hr": latest_packet.rop_ft_hr or 0.0,
+                            "dls_deg_100ft": latest_packet.dls_deg_100ft or 0.0,
                         }
 
                         await websocket.send_json({
@@ -1091,6 +1060,261 @@ async def telemetry_stream(websocket: WebSocket, db = Depends(get_db)):
                 pass
         logger.info("WebSocket connection closed")
 
+# ─── Admin API Endpoints ───────────────────────────────────────────
+
+# Pydantic models for admin requests
+class CreateUserRequest(BaseModel):
+    username: str
+    email: Optional[str] = None
+    password: str
+    role: str = "operator"
+
+class UpdateUserRequest(BaseModel):
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = None
+
+class UpdateConfigRequest(BaseModel):
+    value: Dict
+    description: Optional[str] = None
+
+# ─── User Management (admin only) ─────────────────────────────────
+
+@app.get("/admin/users")
+async def admin_list_users(current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """List all users."""
+    user_repo = UserRepository(db)
+    users = user_repo.get_all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "role": u.role.value if hasattr(u.role, 'value') else str(u.role),
+            "is_active": u.is_active,
+            "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+        }
+        for u in users
+    ]
+
+@app.get("/admin/users/stats")
+async def admin_user_stats(current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """Get user statistics."""
+    user_repo = UserRepository(db)
+    return user_repo.get_user_stats()
+
+@app.post("/admin/users", status_code=201)
+async def admin_create_user(req: CreateUserRequest, current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """Create a new user."""
+    from database.schemas import UserCreate, UserRole as SchemaUserRole
+    user_repo = UserRepository(db)
+
+    # Check if username already exists
+    existing = user_repo.get_by_username(req.username)
+    if existing:
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    user_data = UserCreate(
+        username=req.username,
+        email=req.email,
+        password=req.password,
+        role=SchemaUserRole(req.role),
+    )
+    new_user = user_repo.create_user(user_data)
+    return {
+        "id": new_user.id,
+        "username": new_user.username,
+        "email": new_user.email,
+        "role": new_user.role.value if hasattr(new_user.role, 'value') else str(new_user.role),
+        "is_active": new_user.is_active,
+    }
+
+@app.put("/admin/users/{user_id}")
+async def admin_update_user(user_id: str, req: UpdateUserRequest, current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """Update a user's role, email, status, or password."""
+    from database.schemas import UserUpdate as SchemaUserUpdate, UserRole as SchemaUserRole
+    user_repo = UserRepository(db)
+
+    update_data = {}
+    if req.email is not None:
+        update_data["email"] = req.email
+    if req.role is not None:
+        update_data["role"] = SchemaUserRole(req.role)
+    if req.is_active is not None:
+        update_data["is_active"] = req.is_active
+    if req.password is not None:
+        update_data["password"] = req.password
+
+    schema = SchemaUserUpdate(**update_data)
+    updated = user_repo.update_user(user_id, schema)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "id": updated.id,
+        "username": updated.username,
+        "email": updated.email,
+        "role": updated.role.value if hasattr(updated.role, 'value') else str(updated.role),
+        "is_active": updated.is_active,
+    }
+
+@app.delete("/admin/users/{user_id}")
+async def admin_deactivate_user(user_id: str, current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """Deactivate a user."""
+    user_repo = UserRepository(db)
+    result = user_repo.deactivate_user(user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "User deactivated", "id": user_id}
+
+# ─── System Config (admin only) ───────────────────────────────────
+
+@app.get("/admin/config")
+async def admin_get_config(current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """Get all system configuration entries."""
+    config_repo = ConfigRepository(db)
+    configs = config_repo.get_all_configs()
+    return [
+        {
+            "id": c.id,
+            "key": c.key,
+            "value": c.value,
+            "description": c.description,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+        }
+        for c in configs
+    ]
+
+@app.put("/admin/config/{key}")
+async def admin_update_config(key: str, req: UpdateConfigRequest, current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """Update a configuration value with audit logging."""
+    config_repo = ConfigRepository(db)
+    updated = config_repo.update_config_with_audit(
+        key=key,
+        new_value=req.value,
+        user_id=current_user.username,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Config key not found")
+    return {
+        "key": updated.key,
+        "value": updated.value,
+        "description": updated.description,
+    }
+
+@app.get("/admin/config/history/{key}")
+async def admin_config_history(key: str, current_user: User = Depends(require_role("admin")), db = Depends(get_db)):
+    """Get audit history for a configuration key."""
+    config_repo = ConfigRepository(db)
+    logs = config_repo.get_config_history(key)
+    return [
+        {
+            "id": log.id,
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+            "user_id": log.user_id,
+            "action": log.action,
+            "old_values": log.old_values,
+            "new_values": log.new_values,
+        }
+        for log in logs
+    ]
+
+# ─── Alert Management (engineer+) ─────────────────────────────────
+
+@app.get("/admin/alerts")
+async def admin_list_alerts(
+    severity: Optional[str] = None,
+    alert_status: Optional[str] = None,
+    page: int = 1,
+    per_page: int = 50,
+    current_user: User = Depends(require_role("engineer")),
+    db = Depends(get_db),
+):
+    """List alerts with optional severity/status filters."""
+    from database.schemas import AlertQuery, AlertSeverity as SchemaSeverity, AlertStatus as SchemaStatus
+    alert_repo = AlertRepository(db)
+
+    query = AlertQuery(
+        severity=SchemaSeverity(severity) if severity else None,
+        status=SchemaStatus(alert_status) if alert_status else None,
+        page=page,
+        per_page=per_page,
+    )
+    result = alert_repo.fetch_alerts_by_severity_status(query)
+
+    items = []
+    for a in result.items:
+        items.append({
+            "id": a.id,
+            "timestamp": a.timestamp.isoformat() if a.timestamp else None,
+            "severity": a.severity.value if hasattr(a.severity, 'value') else str(a.severity),
+            "status": a.status.value if hasattr(a.status, 'value') else str(a.status),
+            "title": a.title,
+            "message": a.message,
+            "well_id": a.well_id,
+            "acknowledged_at": a.acknowledged_at.isoformat() if a.acknowledged_at else None,
+            "resolved_at": a.resolved_at.isoformat() if a.resolved_at else None,
+        })
+
+    return {"items": items, "total": result.total, "page": result.page, "pages": result.pages}
+
+@app.put("/admin/alerts/{alert_id}/acknowledge")
+async def admin_acknowledge_alert(alert_id: str, current_user: User = Depends(require_role("engineer")), db = Depends(get_db)):
+    """Acknowledge an alert."""
+    alert_repo = AlertRepository(db)
+    result = alert_repo.acknowledge_alert(alert_id, current_user.username)
+    if not result:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"message": "Alert acknowledged", "id": alert_id}
+
+@app.put("/admin/alerts/{alert_id}/resolve")
+async def admin_resolve_alert(alert_id: str, current_user: User = Depends(require_role("engineer")), db = Depends(get_db)):
+    """Resolve an alert."""
+    alert_repo = AlertRepository(db)
+    result = alert_repo.resolve_alert(alert_id, current_user.username)
+    if not result:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"message": "Alert resolved", "id": alert_id}
+
+@app.get("/admin/alerts/stats")
+async def admin_alert_stats(current_user: User = Depends(require_role("engineer")), db = Depends(get_db)):
+    """Get alert statistics."""
+    alert_repo = AlertRepository(db)
+    return alert_repo.get_alert_stats()
+
+# ─── Audit Logs (admin only) ──────────────────────────────────────
+
+@app.get("/admin/audit-logs")
+async def admin_audit_logs(
+    limit: int = 100,
+    current_user: User = Depends(require_role("admin")),
+    db = Depends(get_db),
+):
+    """Get recent audit log entries."""
+    from database.models import AuditLog
+    from sqlalchemy import select, desc
+
+    stmt = select(AuditLog).order_by(desc(AuditLog.timestamp)).limit(limit)
+    result = db.execute(stmt)
+    logs = list(result.scalars().all())
+
+    return [
+        {
+            "id": log.id,
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+            "user_id": log.user_id,
+            "action": log.action,
+            "resource_type": log.resource_type,
+            "resource_id": log.resource_id,
+            "old_values": log.old_values,
+            "new_values": log.new_values,
+        }
+        for log in logs
+    ]
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api:app", host="0.0.0.0", port=8001, reload=True)

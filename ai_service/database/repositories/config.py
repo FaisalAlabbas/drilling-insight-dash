@@ -3,7 +3,7 @@ Repository for system configuration operations.
 """
 
 from typing import Optional, Dict, Any, List
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 
 from ..models import SystemConfig, AuditLog

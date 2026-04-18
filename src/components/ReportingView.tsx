@@ -36,9 +36,9 @@ export function ReportingView() {
     const warningAlerts = alerts.filter((a) => a.severity === "high").length;
 
     const commandCounts: Record<SteeringCommand, number> = {
-      "No Change": 0,
-      "Move Upward": 0,
-      "Move Downward": 0,
+      "Hold": 0,
+      "Build": 0,
+      "Drop": 0,
       "Turn Left": 0,
       "Turn Right": 0,
     };
