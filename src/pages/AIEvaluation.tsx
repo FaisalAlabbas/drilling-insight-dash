@@ -50,9 +50,14 @@ export function AIEvaluation() {
     error: metricsError,
   } = useQuery({
     queryKey: ["model-metrics"],
-    queryFn: fetchModelMetrics,
-    retry: 1,
-    refetchInterval: 30000,
+    queryFn: async () => {
+      const result = await fetchModelMetrics();
+      if (!result) throw new Error("Failed to fetch model metrics");
+      return result;
+    },
+    retry: 3,
+    retryDelay: 2000,
+    refetchInterval: 15000,
   });
 
   // --- Derived data: per-class metrics table ---
