@@ -34,6 +34,11 @@ import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { IS_PRODUCTION } from "./config";
 import type { UserRole, EdgeHealth, SamplingRate } from "./types";
 import type { SystemMode, ActuatorStatus } from "./api-types";
+import type { BackendState } from "./backend-state";
+import {
+  deriveBackendState,
+  isBackendAvailable,
+} from "./backend-state";
 
 type SidebarModule = ModuleId;
 
@@ -62,16 +67,8 @@ export interface DashboardContextType {
   setSelectedAlert: (a: AlertEvent | null) => void;
   drawerOpen: boolean;
   setDrawerOpen: (o: boolean) => void;
-  /** True when telemetry shown is from mock generation, not a live backend. */
-  isMockData: boolean;
-  /** True when backend is unreachable and app is running in production mode. */
-  isBackendDegraded: boolean;
-  /** True when backend is up but reports impaired subsystem (e.g. no telemetry data). */
-  isBackendImpaired: boolean;
-  /** Active system operating mode from backend. */
-  systemMode: SystemMode;
-  /** Virtual actuator state from backend. */
-  actuatorStatus: ActuatorStatus | null;
+  /** Unified backend connectivity state (replaces isMockData, isBackendDegraded, isBackendImpaired). */
+  backendState: BackendState;
   /** JWT auth token for admin API calls. */
   authToken: string | null;
   /** Authenticated username, or null when not logged in. */
@@ -94,8 +91,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [selectedAlert, setSelectedAlert] = useState<AlertEvent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [backendStatus, setBackendStatus] = useState<BackendHealthStatus>("unreachable");
-  // Initial state IS mock data — flag must start true since initial arrays are synthetic
-  const [isMockData, setIsMockData] = useState(true);
   // System operating mode from backend
   const [systemMode, setSystemMode] = useState<SystemMode>("SIMULATION");
   // Virtual actuator state
@@ -103,6 +98,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Auth state
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<string | null>(null);
+
+  // Derive unified BackendState from raw component state
+  const backendState = deriveBackendState(
+    backendStatus,
+    systemMode,
+    actuatorStatus,
+    IS_PRODUCTION
+  );
 
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     try {
@@ -141,12 +144,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(null);
     setAuthUser(null);
   }, []);
-
-  const backendAvailable = backendStatus !== "unreachable";
-  // True only in production mode with unreachable backend
-  const isBackendDegraded = IS_PRODUCTION && !backendAvailable;
-  // True when backend responds but reports impaired subsystem (e.g. no telemetry data)
-  const isBackendImpaired = backendStatus === "degraded";
 
   // Use config from backend
   const { data: config } = useConfig();
@@ -226,7 +223,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   // Poll actuator status when backend is available (fallback when WS not connected)
   useEffect(() => {
-    if (!backendAvailable) return;
+    if (!isBackendAvailable(backendState)) return;
     // Skip polling if WebSocket is providing actuator status
     if (wsConnected) return;
     fetchActuatorStatus().then((s) => { if (s) setActuatorStatus(s); });
@@ -234,7 +231,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       fetchActuatorStatus().then((s) => { if (s) setActuatorStatus(s); });
     }, 5_000);
     return () => clearInterval(id);
-  }, [backendAvailable, wsConnected]);
+  }, [backendState, wsConnected]);
 
   // Initialize telemetry with WebSocket data or mock
   const [telemetrySourceIsWebSocket, setTelemetrySourceIsWebSocket] = useState(false);
@@ -244,7 +241,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     if (wstelemetry.length > 0) {
       setTelemetry(wstelemetry);
       setTelemetrySourceIsWebSocket(true);
-      setIsMockData(false);
     }
   }, [wstelemetry]);
 
@@ -269,7 +265,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const interval = setInterval(
       async () => {
         // Only try backend polling if WebSocket isn't available
-        if (!wsConnected && backendAvailable) {
+        if (!wsConnected && isBackendAvailable(backendState)) {
           try {
             // Use shared API service for consistent error handling and validation
             const newPacket = await fetchTelemetry();
@@ -278,7 +274,6 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
                 const next = [...prev, newPacket];
                 return next.length > 300 ? next.slice(-300) : next;
               });
-              setIsMockData(false);
               return;
             }
           } catch (error) {
@@ -290,8 +285,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         // Production operators MUST see the true degraded state.
         // Do not update state — let UI show that data is unavailable.
         if (IS_PRODUCTION) {
-          // Mark that we're in degraded mode but do NOT fake data
-          setIsMockData(true);
+          // Data is simulated per the BackendState machine
           return;
         }
 
@@ -301,14 +295,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
           const next = [...prev, newPacket];
           return next.length > 300 ? next.slice(-300) : next;
         });
-        setIsMockData(true);
       },
       samplingRate === "10Hz" ? 100 : 1000
     );
     return () => clearInterval(interval);
   }, [
     samplingRate,
-    backendAvailable,
+    backendState,
     wsConnected,
     telemetrySourceIsWebSocket,
     wstelemetry.length,
@@ -322,7 +315,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         let newDecision: DecisionRecord | null = null;
 
         // Try to get prediction from backend if available
-        if (backendAvailable && packets.length > 0) {
+        if (isBackendAvailable(backendState) && packets.length > 0) {
           const latestTelemetry = packets[packets.length - 1];
           const apiDecision = await getRecommendation(latestTelemetry);
           if (apiDecision) {
@@ -359,7 +352,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [backendAvailable, config]);
+  }, [backendState, config]);
 
   // Get accessible modules based on current role
   const accessibleModules = getAccessibleModules(role);
@@ -400,11 +393,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         setDrawerOpen,
         accessibleModules,
         hasModuleAccess,
-        isMockData,
-        isBackendDegraded,
-        isBackendImpaired,
-        systemMode,
-        actuatorStatus,
+        backendState,
         authToken,
         authUser,
         login,

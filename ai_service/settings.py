@@ -85,6 +85,9 @@ class Settings:
     # Actuator settings
     ACTUATOR_DERATE_THRESHOLD: float = float(os.getenv("ACTUATOR_DERATE_THRESHOLD", "0.65"))
 
+    # Decision stats aggregation — limit for query performance
+    DECISION_STATS_LIMIT: int = int(os.getenv("DECISION_STATS_LIMIT", "50"))
+
     @classmethod
     def to_dict(cls) -> dict:
         """Return settings as dictionary"""

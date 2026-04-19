@@ -26,8 +26,18 @@ import {
 import { predictDecision, type PredictPayload } from "./aiApi";
 import { API_BASE_URL } from "./config";
 import { ZodSchema } from "zod";
+import { API_CONFIG } from "./api-config";
 
-const FETCH_TIMEOUT_MS = 8000;
+/**
+ * Configurable fetch timeouts for different endpoint types
+ * Most endpoints respond within 5s, but heavy queries may take longer
+ */
+const FETCH_TIMEOUTS = {
+  default: API_CONFIG.timeout.default,
+  heavy: API_CONFIG.timeout.heavy,
+} as const;
+
+const FETCH_TIMEOUT_MS = FETCH_TIMEOUTS.default;
 
 /**
  * Reusable helper for fetch + timeout + JSON parse + schema validation.
@@ -37,10 +47,11 @@ const FETCH_TIMEOUT_MS = 8000;
 async function fetchAndValidate<T>(
   endpoint: string,
   schema: ZodSchema,
-  functionName: string
+  functionName: string,
+  timeoutMs: number = FETCH_TIMEOUT_MS
 ): Promise<T | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -58,7 +69,7 @@ async function fetchAndValidate<T>(
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === "AbortError") {
-      console.error(`${functionName} timed out after ${FETCH_TIMEOUT_MS}ms`);
+      console.error(`${functionName} timed out after ${timeoutMs}ms`);
     } else if (error instanceof Error) {
       console.error(`${functionName} failed: ${error.message}`);
     } else {
@@ -180,7 +191,8 @@ export async function fetchModelMetrics(): Promise<ModelMetrics | null> {
   return fetchAndValidate<ModelMetrics>(
     "/model/metrics",
     ModelMetricsSchema,
-    "fetchModelMetrics"
+    "fetchModelMetrics",
+    FETCH_TIMEOUTS.heavy  // Heavy query, allow longer timeout
   );
 }
 
@@ -202,7 +214,8 @@ export async function fetchDecisionStats(): Promise<DecisionStats | null> {
   return fetchAndValidate<DecisionStats>(
     "/decisions/stats",
     DecisionStatsSchema,
-    "fetchDecisionStats"
+    "fetchDecisionStats",
+    FETCH_TIMEOUTS.heavy  // Heavy query, allow longer timeout
   );
 }
 

@@ -13,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { UserRole } from "@/lib/types";
 import { exportToCSV } from "@/lib/export-utils";
+import {
+  isBackendDegraded,
+  isDataSimulated,
+  isProductionOutage,
+  isPrototypeMode,
+} from "@/lib/backend-state";
 
 export function DashboardHeader() {
   const {
@@ -23,10 +29,7 @@ export function DashboardHeader() {
     setSearchQuery,
     telemetry,
     decisions,
-    isMockData,
-    isBackendDegraded,
-    isBackendImpaired,
-    systemMode,
+    backendState,
   } = useDashboard();
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,9 +42,20 @@ export function DashboardHeader() {
     exportToCSV(telemetry, decisions);
   };
 
+  // Determine which status banner to show (simplifies nested conditionals)
+  const getBannerType = () => {
+    if (isProductionOutage(backendState)) return "outage";
+    if (isBackendDegraded(backendState)) return "degraded";
+    if (isDataSimulated(backendState)) return "simulated";
+    return "healthy";
+  };
+
+  const bannerType = getBannerType();
+  const isPrototype = isPrototypeMode(backendState);
+
   return (
     <>
-      {isBackendDegraded && (
+      {bannerType === "outage" && (
         <div className="bg-destructive/90 text-destructive-foreground flex items-center justify-center gap-2 px-4 py-1.5 text-xs font-medium">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
@@ -50,7 +64,7 @@ export function DashboardHeader() {
           </span>
         </div>
       )}
-      {!isBackendDegraded && isBackendImpaired && (
+      {bannerType === "degraded" && (
         <div className="bg-amber-600/80 text-white flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
@@ -59,26 +73,26 @@ export function DashboardHeader() {
           </span>
         </div>
       )}
-      {!isBackendDegraded && !isBackendImpaired && isMockData && (
+      {bannerType === "simulated" && (
         <div className="bg-signal-yellow/20 text-signal-yellow border-b border-signal-yellow/30 flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
-            {systemMode === "PROTOTYPE"
+            {isPrototype
               ? "Prototype Mode — awaiting prototype connection"
               : "Simulation Mode — displaying simulated telemetry"}
           </span>
         </div>
       )}
-      {!isBackendDegraded && !isBackendImpaired && !isMockData && (
+      {bannerType === "healthy" && (
         <div className={cn(
           "flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium border-b",
-          systemMode === "PROTOTYPE"
+          isPrototype
             ? "bg-signal-green/10 text-signal-green border-signal-green/20"
             : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
         )}>
           <Activity className="h-3.5 w-3.5 shrink-0" />
           <span>
-            {systemMode === "PROTOTYPE"
+            {isPrototype
               ? "Prototype Mode — receiving live prototype telemetry"
               : "Simulation Mode — streaming simulated telemetry from backend"}
           </span>
@@ -92,12 +106,12 @@ export function DashboardHeader() {
           </h1>
           <span
             className={`text-[10px] font-mono px-2 py-0.5 rounded-sm hidden md:inline ${
-              systemMode === "PROTOTYPE"
+              isPrototype
                 ? "bg-signal-green/15 text-signal-green"
                 : "bg-cyan-500/15 text-cyan-400"
             }`}
           >
-            {systemMode === "PROTOTYPE" ? "PROTOTYPE CONNECTED" : "SIMULATION MODE"}
+            {isPrototype ? "PROTOTYPE CONNECTED" : "SIMULATION MODE"}
           </span>
         </div>
 
