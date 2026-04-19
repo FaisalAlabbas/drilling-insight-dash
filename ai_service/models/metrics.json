@@ -1,107 +1,107 @@
 {
-  "accuracy": 0.8787878787878788,
-  "macro_f1": 0.8673238095238094,
-  "weighted_f1": 0.8779187796330653,
-  "precision": 0.887812681504542,
-  "recall": 0.8543259548674719,
+  "accuracy": 0.22641509433962265,
+  "macro_f1": 0.22422798861320067,
+  "weighted_f1": 0.22404791774983068,
+  "precision": 0.22573999012816767,
+  "recall": 0.22661064425770308,
   "per_class_metrics": {
     "Build": {
-      "precision": 0.8438,
-      "recall": 0.8852,
-      "f1": 0.864,
-      "support": 61
+      "precision": 0.2115,
+      "recall": 0.2588,
+      "f1": 0.2328,
+      "support": 85
     },
     "Drop": {
-      "precision": 0.9107,
-      "recall": 0.9107,
-      "f1": 0.9107,
-      "support": 56
+      "precision": 0.2921,
+      "recall": 0.3095,
+      "f1": 0.3006,
+      "support": 84
     },
     "Hold": {
-      "precision": 0.9231,
-      "recall": 0.7059,
-      "f1": 0.8,
-      "support": 17
+      "precision": 0.2113,
+      "recall": 0.1765,
+      "f1": 0.1923,
+      "support": 85
     },
     "Turn Left": {
-      "precision": 0.8545,
-      "recall": 0.94,
-      "f1": 0.8952,
-      "support": 50
+      "precision": 0.2097,
+      "recall": 0.1529,
+      "f1": 0.1769,
+      "support": 85
     },
     "Turn Right": {
-      "precision": 0.907,
-      "recall": 0.8298,
-      "f1": 0.8667,
-      "support": 47
+      "precision": 0.2041,
+      "recall": 0.2353,
+      "f1": 0.2186,
+      "support": 85
     }
   },
   "class_distribution": {
-    "Build": 303,
-    "Drop": 280,
-    "Turn Left": 248,
-    "Turn Right": 234,
-    "Hold": 86
+    "Turn Right": 424,
+    "Drop": 424,
+    "Build": 424,
+    "Turn Left": 424,
+    "Hold": 424
   },
   "feature_importances": [
     {
-      "name": "num__Inclination_deg",
-      "importance": 0.4434
-    },
-    {
-      "name": "num__Azimuth_deg",
-      "importance": 0.3973
-    },
-    {
       "name": "num__DLS_deg_per_100ft",
-      "importance": 0.0292
-    },
-    {
-      "name": "num__ROP_ft_hr",
-      "importance": 0.0223
-    },
-    {
-      "name": "num__RPM_demo",
-      "importance": 0.015
-    },
-    {
-      "name": "num__KLOGH",
-      "importance": 0.0149
-    },
-    {
-      "name": "num__VSH",
-      "importance": 0.0144
-    },
-    {
-      "name": "num__WOB_klbf",
-      "importance": 0.0142
-    },
-    {
-      "name": "num__Vibration_g",
-      "importance": 0.0125
-    },
-    {
-      "name": "num__Torque_kftlb",
-      "importance": 0.0121
+      "importance": 0.1546
     },
     {
       "name": "num__SW",
-      "importance": 0.0118
+      "importance": 0.1504
+    },
+    {
+      "name": "num__RPM_demo",
+      "importance": 0.1257
+    },
+    {
+      "name": "num__Torque_kftlb",
+      "importance": 0.1115
+    },
+    {
+      "name": "num__WOB_klbf",
+      "importance": 0.085
+    },
+    {
+      "name": "num__VSH",
+      "importance": 0.0725
+    },
+    {
+      "name": "num__Vibration_g",
+      "importance": 0.0701
+    },
+    {
+      "name": "num__ROP_ft_hr",
+      "importance": 0.0604
     },
     {
       "name": "num__PHIF",
-      "importance": 0.0114
+      "importance": 0.0518
+    },
+    {
+      "name": "num__KLOGH",
+      "importance": 0.0444
+    },
+    {
+      "name": "num__Azimuth_deg",
+      "importance": 0.0322
     },
     {
       "name": "Formation_Class_Transition",
-      "importance": 0.001
-    },
-    {
-      "name": "Formation_Class_Cleaner sand",
-      "importance": 0.0005
+      "importance": 0.024
     },
     {
       "name": "Formation_Class_Shale-prone",
+      "importance": 0.0174
+    },
+    {
+      "name": "Formation_Class_Cleaner sand",
+      "importance": 0.0
+    },
+    {
+      "name": "num__Inclination_deg",
       "importance": 0.0
     }
   ],
@@ -121,14 +121,68 @@
     "Formation_Class"
   ],
   "algorithm": "GB-balanced + CalibratedClassifierCV",
-  "n_estimators": 100,
-  "timestamp": "2026-04-16T03:16:34.773153",
+  "n_estimators": 60,
+  "timestamp": "2026-04-19T03:36:33.335685",
   "model_version": "rf-cal-v2",
   "dataset_info": {
-    "total_samples": 1151,
-    "train_samples": 920,
-    "test_samples": 231,
+    "total_samples": 2120,
+    "train_samples": 1696,
+    "test_samples": 424,
     "features": 15,
     "split_ratio": 0.8
+  },
+  "confusion_matrix": {
+    "labels": [
+      "Build",
+      "Drop",
+      "Hold",
+      "Turn Left",
+      "Turn Right"
+    ],
+    "matrix": [
+      [
+        22,
+        16,
+        15,
+        10,
+        22
+      ],
+      [
+        16,
+        26,
+        12,
+        15,
+        15
+      ],
+      [
+        18,
+        14,
+        15,
+        16,
+        22
+      ],
+      [
+        19,
+        13,
+        21,
+        13,
+        19
+      ],
+      [
+        29,
+        20,
+        8,
+        8,
+        20
+      ]
+    ]
+  },
+  "overfit_check": {
+    "train_accuracy": 0.2866,
+    "test_accuracy": 0.2264,
+    "train_macro_f1": 0.2833,
+    "test_macro_f1": 0.2242,
+    "accuracy_gap": 0.0601,
+    "f1_gap": 0.0591
   }
 }

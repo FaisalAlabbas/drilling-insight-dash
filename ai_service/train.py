@@ -83,19 +83,21 @@ def main():
 
     candidates = {
         "RF-shallow": RandomForestClassifier(
-            n_estimators=300, max_depth=7, min_samples_leaf=12,
-            min_samples_split=25, max_features="sqrt",
+            n_estimators=250, max_depth=6, min_samples_leaf=15,
+            min_samples_split=30, max_features="sqrt",
             random_state=42, class_weight="balanced", n_jobs=-1
         ),
         "GB-balanced": GradientBoostingClassifier(
-            n_estimators=100, max_depth=3, learning_rate=0.1,
-            min_samples_leaf=25, subsample=0.65,
-            max_features=0.5, random_state=42
+            n_estimators=60, max_depth=2, learning_rate=0.06,
+            min_samples_leaf=45, subsample=0.5,
+            max_features=0.35, random_state=42,
+            min_samples_split=50, validation_fraction=0.15, n_iter_no_change=8, tol=1e-3
         ),
         "GB-minimal": GradientBoostingClassifier(
-            n_estimators=120, max_depth=3, learning_rate=0.08,
-            min_samples_leaf=20, subsample=0.7,
-            max_features=0.6, random_state=42
+            n_estimators=70, max_depth=3, learning_rate=0.07,
+            min_samples_leaf=40, subsample=0.5,
+            max_features=0.35, random_state=42,
+            min_samples_split=50, validation_fraction=0.1, n_iter_no_change=10
         ),
     }
 
@@ -244,7 +246,19 @@ def main():
             'test_samples': len(X_test),
             'features': len(feature_names),
             'split_ratio': 0.80,
-        }
+        },
+        'confusion_matrix': {
+            'labels': labels,
+            'matrix': cm.tolist(),
+        },
+        'overfit_check': {
+            'train_accuracy': round(train_acc, 4),
+            'test_accuracy': round(accuracy, 4),
+            'train_macro_f1': round(train_f1, 4),
+            'test_macro_f1': round(macro_f1, 4),
+            'accuracy_gap': round(overfit_gap_acc, 4),
+            'f1_gap': round(overfit_gap_f1, 4),
+        },
     }
 
     with open('models/metrics.json', 'w') as f:

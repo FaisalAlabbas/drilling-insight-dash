@@ -64,6 +64,7 @@ export const ConfigResponseSchema = z.object({
   sampling_rate_hz: z.number().positive(),
   limits: LimitsSchema,
   units: z.record(z.string(), z.string()),
+  system_mode: z.string().optional(),
 });
 
 export type ConfigResponse = z.infer<typeof ConfigResponseSchema>;
@@ -93,6 +94,38 @@ export const FeatureVectorSchema = z.record(
 
 export type FeatureVector = z.infer<typeof FeatureVectorSchema>;
 
+export const PeteParameterStatusSchema = z.enum(["OK", "NEAR_LIMIT", "OUTSIDE"]);
+export const PeteOverallStatusSchema = z.enum(["WITHIN_LIMITS", "NEAR_LIMIT", "OUTSIDE_LIMITS"]);
+
+export const PeteParameterMarginSchema = z.object({
+  name: z.string(),
+  value: z.number(),
+  lower_limit: z.number().nullable().optional(),
+  upper_limit: z.number().nullable().optional(),
+  margin: z.number(),
+  status: PeteParameterStatusSchema,
+});
+
+export const PeteStatusSchema = z.object({
+  overall_status: PeteOverallStatusSchema,
+  parameter_margins: z.array(PeteParameterMarginSchema),
+  violations: z.array(z.string()),
+  max_dls_change: z.number(),
+  formation_sensitivity: z.string().nullable().optional(),
+});
+
+export const SystemModeSchema = z.enum(["SIMULATION", "PROTOTYPE"]);
+
+export const ActuatorStatusSchema = z.object({
+  state: z.string(),
+  last_command: z.string().nullable(),
+  last_outcome: z.string().nullable(),
+  timestamp: z.string().nullable(),
+  is_simulated: z.boolean(),
+  fault_reason: z.string().nullable(),
+  command_count: z.number(),
+});
+
 export const DecisionRecordSchema = z.object({
   timestamp: z.string().datetime(),
   model_version: z.string(),
@@ -104,6 +137,9 @@ export const DecisionRecordSchema = z.object({
   execution_status: z.string(),
   fallback_mode: z.string().nullable().optional(),
   event_tags: z.array(z.string()),
+  pete_status: PeteStatusSchema.nullable().optional(),
+  system_mode: z.string().optional(),
+  actuator_outcome: z.string().nullable().optional(),
 });
 
 export type DecisionRecord = z.infer<typeof DecisionRecordSchema>;
@@ -114,6 +150,9 @@ export const PredictResponseSchema = z.object({
   gate_status: GateOutcomeSchema,
   alert_message: z.string(),
   decision_record: DecisionRecordSchema,
+  pete_status: PeteStatusSchema.nullable().optional(),
+  system_mode: z.string().optional(),
+  actuator_status: ActuatorStatusSchema.nullable().optional(),
 });
 
 export type PredictResponse = z.infer<typeof PredictResponseSchema>;
@@ -134,6 +173,20 @@ const FeatureImportanceSchema = z.object({
   importance: z.number(),
 });
 
+const ConfusionMatrixSchema = z.object({
+  labels: z.array(z.string()),
+  matrix: z.array(z.array(z.number())),
+});
+
+const OverfitCheckSchema = z.object({
+  train_accuracy: z.number(),
+  test_accuracy: z.number(),
+  train_macro_f1: z.number(),
+  test_macro_f1: z.number(),
+  accuracy_gap: z.number(),
+  f1_gap: z.number(),
+});
+
 export const ModelMetricsSchema = z.object({
   available: z.boolean(),
   message: z.string().optional(),
@@ -144,7 +197,6 @@ export const ModelMetricsSchema = z.object({
   accuracy: z.number().min(0).max(1).optional(),
   precision: z.number().min(0).max(1).optional(),
   recall: z.number().min(0).max(1).optional(),
-  f1_score: z.number().min(0).max(1).optional(),
   macro_f1: z.number().min(0).max(1).optional(),
   weighted_f1: z.number().min(0).max(1).optional(),
   per_class_metrics: z.record(z.string(), PerClassMetricSchema).optional(),
@@ -159,6 +211,8 @@ export const ModelMetricsSchema = z.object({
     features: z.number(),
     split_ratio: z.number().optional(),
   }).optional(),
+  confusion_matrix: ConfusionMatrixSchema.optional(),
+  overfit_check: OverfitCheckSchema.optional(),
 });
 
 export type ModelMetrics = z.infer<typeof ModelMetricsSchema>;
@@ -232,6 +286,25 @@ export const AlertEventSchema = z.object({
 });
 
 export type AlertEvent = z.infer<typeof AlertEventSchema>;
+
+// ============================================================================
+// Decision Stats Schemas (Verification Page)
+// ============================================================================
+
+export const DecisionStatsSchema = z.object({
+  total_decisions: z.number(),
+  by_status: z.record(z.string(), z.number()),
+  by_outcome: z.record(z.string(), z.number()),
+  avg_confidence: z.number().nullable(),
+  time_range_days: z.number(),
+  actuator_counts: z.record(z.string(), z.number()),
+  anomaly_count: z.number(),
+  envelope_violations: z.number(),
+  system_mode: z.string(),
+  actuator_state: ActuatorStatusSchema,
+});
+
+export type DecisionStats = z.infer<typeof DecisionStatsSchema>;
 
 // ============================================================================
 // Operating Limits Schemas

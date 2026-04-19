@@ -144,6 +144,8 @@ class DecisionBase(BaseModel):
     feature_summary: Optional[Dict[str, Any]] = None
     event_tags: Optional[List[str]] = None
     related_signals: Optional[Dict[str, Any]] = None
+    system_mode: Optional[str] = "SIMULATION"
+    actuator_outcome: Optional[str] = None
 
 class DecisionCreate(DecisionBase):
     pass

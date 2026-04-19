@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useDashboard } from "@/lib/dashboard-context";
 import { TelemetryChart } from "@/components/TelemetryChart";
 import { AIRecommendationCard } from "@/components/AIRecommendationCard";
+import { ActuatorStatusCard } from "@/components/ActuatorStatusCard";
 import { StatsCard } from "@/components/StatsCard";
 import { RecentDecisions } from "@/components/RecentDecisions";
 
@@ -76,13 +77,14 @@ export function LiveMonitoringView() {
 
   return (
     <div className="space-y-4">
-      {/* Main chart + AI card */}
+      {/* Main chart + AI card + Actuator */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <TelemetryChart />
         </div>
-        <div>
+        <div className="space-y-4">
           <AIRecommendationCard />
+          <ActuatorStatusCard />
         </div>
       </div>
 

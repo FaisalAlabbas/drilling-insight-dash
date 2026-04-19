@@ -159,6 +159,97 @@ def seed_system_config(session: Session) -> None:
             "value": {"value": 3.0},
             "description": "Maximum dogleg severity (deg/100ft)",
         },
+        # PETE Operating Envelope Config
+        {
+            "id": "config_pete_001",
+            "key": "pete_wob_min",
+            "value": {"value": 20.0},
+            "description": "PETE: minimum weight on bit (klbf)",
+        },
+        {
+            "id": "config_pete_002",
+            "key": "pete_wob_max",
+            "value": {"value": 60.0},
+            "description": "PETE: maximum weight on bit (klbf)",
+        },
+        {
+            "id": "config_pete_003",
+            "key": "pete_rpm_min",
+            "value": {"value": 50.0},
+            "description": "PETE: minimum rotary speed (RPM)",
+        },
+        {
+            "id": "config_pete_004",
+            "key": "pete_rpm_max",
+            "value": {"value": 300.0},
+            "description": "PETE: maximum rotary speed (RPM)",
+        },
+        {
+            "id": "config_pete_005",
+            "key": "pete_torque_min",
+            "value": {"value": 0.0},
+            "description": "PETE: minimum torque (kft-lb)",
+        },
+        {
+            "id": "config_pete_006",
+            "key": "pete_torque_max",
+            "value": {"value": 50.0},
+            "description": "PETE: maximum torque (kft-lb)",
+        },
+        {
+            "id": "config_pete_007",
+            "key": "pete_vibration_warn",
+            "value": {"value": 0.35},
+            "description": "PETE: vibration warning threshold (g)",
+        },
+        {
+            "id": "config_pete_008",
+            "key": "pete_vibration_critical",
+            "value": {"value": 0.5},
+            "description": "PETE: vibration critical threshold (g)",
+        },
+        {
+            "id": "config_pete_009",
+            "key": "pete_dls_warn",
+            "value": {"value": 2.5},
+            "description": "PETE: DLS warning threshold (deg/100ft)",
+        },
+        {
+            "id": "config_pete_010",
+            "key": "pete_dls_critical",
+            "value": {"value": 3.0},
+            "description": "PETE: DLS critical threshold (deg/100ft)",
+        },
+        {
+            "id": "config_pete_011",
+            "key": "pete_inclination_max",
+            "value": {"value": 90.0},
+            "description": "PETE: maximum inclination (degrees)",
+        },
+        {
+            "id": "config_pete_012",
+            "key": "pete_near_limit_margin",
+            "value": {"value": 0.15},
+            "description": "PETE: near-limit margin fraction (0-1)",
+        },
+        {
+            "id": "config_pete_013",
+            "key": "pete_formation_mult_soft",
+            "value": {"value": 0.8},
+            "description": "PETE: formation multiplier for soft formations",
+        },
+        {
+            "id": "config_pete_014",
+            "key": "pete_formation_mult_medium",
+            "value": {"value": 1.0},
+            "description": "PETE: formation multiplier for medium formations",
+        },
+        {
+            "id": "config_pete_015",
+            "key": "pete_formation_mult_hard",
+            "value": {"value": 1.2},
+            "description": "PETE: formation multiplier for hard formations",
+        },
     ]
 
     for config_item in config_data:

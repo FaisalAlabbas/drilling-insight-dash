@@ -92,6 +92,12 @@ export function AIEvaluation() {
     ? `${Math.round(splitRatio * 100)}/${Math.round((1 - splitRatio) * 100)}`
     : null;
 
+  // --- Derived data: confusion matrix ---
+  const confusionMatrix = modelMetrics?.confusion_matrix ?? null;
+
+  // --- Derived data: overfitting check ---
+  const overfitCheck = modelMetrics?.overfit_check ?? null;
+
   const runTest = async () => {
     setLoading(true);
     setTestError(null);
@@ -169,7 +175,7 @@ export function AIEvaluation() {
         ) : (
           <div>
             {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -201,6 +207,22 @@ export function AIEvaluation() {
                       : "N/A"}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">Unweighted average across classes</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Weighted F1
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {modelMetrics.weighted_f1 != null
+                      ? modelMetrics.weighted_f1.toFixed(3)
+                      : "N/A"}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Support-weighted average</p>
                 </CardContent>
               </Card>
 
@@ -256,7 +278,7 @@ export function AIEvaluation() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Accuracy</p>
                         <p className="text-lg font-semibold">
@@ -282,12 +304,79 @@ export function AIEvaluation() {
                         </p>
                       </div>
                       <div>
+                        <p className="text-sm text-muted-foreground">Weighted F1</p>
+                        <p className="text-lg font-semibold">
+                          {modelMetrics.weighted_f1 != null
+                            ? modelMetrics.weighted_f1.toFixed(3)
+                            : "N/A"}
+                        </p>
+                      </div>
+                      <div>
                         <p className="text-sm text-muted-foreground">Test Split</p>
                         <p className="text-lg font-semibold">
                           {splitLabel ?? "N/A"}
                         </p>
                       </div>
                     </div>
+
+                    {/* Overfitting Check */}
+                    {overfitCheck ? (
+                      <div className="mt-6">
+                        <h3 className="font-semibold mb-3">Overfitting Check (Train vs. Test)</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Train Accuracy</p>
+                            <p className="text-lg font-semibold">
+                              {(overfitCheck.train_accuracy * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Test Accuracy</p>
+                            <p className="text-lg font-semibold">
+                              {(overfitCheck.test_accuracy * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Accuracy Gap</p>
+                            <p className={`text-lg font-semibold ${overfitCheck.accuracy_gap > 0.10 ? "text-red-500" : overfitCheck.accuracy_gap > 0.05 ? "text-yellow-500" : "text-green-500"}`}>
+                              {overfitCheck.accuracy_gap > 0 ? "+" : ""}{(overfitCheck.accuracy_gap * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Train Macro F1</p>
+                            <p className="text-lg font-semibold">
+                              {overfitCheck.train_macro_f1.toFixed(3)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Test Macro F1</p>
+                            <p className="text-lg font-semibold">
+                              {overfitCheck.test_macro_f1.toFixed(3)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">F1 Gap</p>
+                            <p className={`text-lg font-semibold ${overfitCheck.f1_gap > 0.10 ? "text-red-500" : overfitCheck.f1_gap > 0.05 ? "text-yellow-500" : "text-green-500"}`}>
+                              {overfitCheck.f1_gap > 0 ? "+" : ""}{(overfitCheck.f1_gap * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                        {overfitCheck.f1_gap > 0.10 && (
+                          <Alert className="mt-3">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>
+                              F1 gap exceeds 10% — the model may be overfitting to the training data.
+                              Consider adding regularization or collecting more samples.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="mt-6">
+                        <h3 className="font-semibold mb-3">Overfitting Check</h3>
+                        <MetricUnavailable label="Retrain the model to generate overfitting diagnostics" />
+                      </div>
+                    )}
 
                     <div className="mt-6">
                       <h3 className="font-semibold mb-3">Class Distribution (Full Dataset)</h3>
@@ -425,6 +514,73 @@ export function AIEvaluation() {
                           </Alert>
                         )}
                       </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Confusion Matrix */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Confusion Matrix</CardTitle>
+                    <CardDescription>
+                      Predicted vs. actual class counts on the test set
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {confusionMatrix ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 px-2">Actual \ Predicted</th>
+                              {confusionMatrix.labels.map((label) => (
+                                <th key={label} className="text-center py-2 px-2 min-w-[70px]">
+                                  {label}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {confusionMatrix.matrix.map((row, i) => {
+                              const rowTotal = row.reduce((a, b) => a + b, 0);
+                              return (
+                                <tr key={i} className={i % 2 === 0 ? "bg-muted/50" : ""}>
+                                  <td className="py-2 px-2 font-medium">
+                                    {confusionMatrix.labels[i]}
+                                  </td>
+                                  {row.map((cell, j) => {
+                                    const isCorrect = i === j;
+                                    const intensity = rowTotal > 0 ? cell / rowTotal : 0;
+                                    return (
+                                      <td
+                                        key={j}
+                                        className={`text-center py-2 px-2 font-mono ${
+                                          isCorrect
+                                            ? "font-bold text-green-700 dark:text-green-400"
+                                            : cell > 0
+                                              ? "text-red-600 dark:text-red-400"
+                                              : "text-muted-foreground"
+                                        }`}
+                                        style={
+                                          isCorrect && intensity > 0
+                                            ? { backgroundColor: `rgba(16, 185, 129, ${intensity * 0.2})` }
+                                            : cell > 0
+                                              ? { backgroundColor: `rgba(239, 68, 68, ${intensity * 0.15})` }
+                                              : undefined
+                                        }
+                                      >
+                                        {cell}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <MetricUnavailable label="Confusion matrix not available — retrain the model to generate this data" />
                     )}
                   </CardContent>
                 </Card>

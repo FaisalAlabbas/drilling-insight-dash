@@ -56,6 +56,7 @@ export interface ConfigResponse {
   sampling_rate_hz: number;
   limits: Limits;
   units: Record<string, string>;
+  system_mode?: string;
 }
 
 // ============================================================================
@@ -71,8 +72,57 @@ export type SteeringCommand =
 
 export type GateOutcome = "ACCEPTED" | "REDUCED" | "REJECTED";
 
+export type SystemMode = "SIMULATION" | "PROTOTYPE";
+
 export interface FeatureVector {
   [key: string]: number | string;
+}
+
+export type PeteParameterStatusType = "OK" | "NEAR_LIMIT" | "OUTSIDE";
+export type PeteOverallStatus = "WITHIN_LIMITS" | "NEAR_LIMIT" | "OUTSIDE_LIMITS";
+
+export interface PeteParameterMargin {
+  name: string;
+  value: number;
+  lower_limit?: number | null;
+  upper_limit?: number | null;
+  margin: number;
+  status: PeteParameterStatusType;
+}
+
+export interface PeteStatus {
+  overall_status: PeteOverallStatus;
+  parameter_margins: PeteParameterMargin[];
+  violations: string[];
+  max_dls_change: number;
+  formation_sensitivity?: string | null;
+}
+
+// ============================================================================
+// Actuator Types
+// ============================================================================
+
+export type ActuatorOutcome =
+  | "ACK_EXECUTED"
+  | "ACK_REDUCED"
+  | "ACK_REJECTED"
+  | "ACK_BLOCKED"
+  | "ACK_MANUAL_FALLBACK";
+
+export type ActuatorState =
+  | "IDLE"
+  | "COMPLETE"
+  | "FAULT"
+  | "MANUAL";
+
+export interface ActuatorStatus {
+  state: ActuatorState;
+  last_command: string | null;
+  last_outcome: ActuatorOutcome | null;
+  timestamp: string | null;
+  is_simulated: boolean;
+  fault_reason: string | null;
+  command_count: number;
 }
 
 export interface DecisionRecord {
@@ -86,6 +136,9 @@ export interface DecisionRecord {
   execution_status: string;
   fallback_mode?: string | null;
   event_tags: string[];
+  pete_status?: PeteStatus | null;
+  system_mode?: string;
+  actuator_outcome?: string | null;
 }
 
 export interface PredictResponse {
@@ -94,6 +147,9 @@ export interface PredictResponse {
   gate_status: GateOutcome;
   alert_message: string;
   decision_record: DecisionRecord;
+  pete_status?: PeteStatus | null;
+  system_mode?: string;
+  actuator_status?: ActuatorStatus | null;
 }
 
 // ============================================================================
@@ -112,6 +168,20 @@ export interface FeatureImportance {
   importance: number;
 }
 
+export interface ConfusionMatrix {
+  labels: string[];
+  matrix: number[][];
+}
+
+export interface OverfitCheck {
+  train_accuracy: number;
+  test_accuracy: number;
+  train_macro_f1: number;
+  test_macro_f1: number;
+  accuracy_gap: number;
+  f1_gap: number;
+}
+
 export interface ModelMetrics {
   available: boolean;
   message?: string;
@@ -122,7 +192,6 @@ export interface ModelMetrics {
   accuracy?: number;
   precision?: number;
   recall?: number;
-  f1_score?: number;
   macro_f1?: number;
   weighted_f1?: number;
   per_class_metrics?: Record<string, PerClassMetric>;
@@ -137,6 +206,8 @@ export interface ModelMetrics {
     features: number;
     split_ratio?: number;
   };
+  confusion_matrix?: ConfusionMatrix;
+  overfit_check?: OverfitCheck;
 }
 
 // ============================================================================
@@ -146,6 +217,8 @@ export interface ModelMetrics {
 export interface HealthCheckResponse {
   status: "healthy" | "degraded" | "unhealthy";
   timestamp: string;
+  system_mode?: string;
+  telemetry_source?: string;
   checks: Record<
     string,
     {
@@ -208,6 +281,23 @@ export interface OperatingLimits {
   wob_range: [number, number];
   torque_range: [number, number];
   rpm_range: [number, number];
+}
+
+// ============================================================================
+// Decision Stats (Verification Page)
+// ============================================================================
+
+export interface DecisionStats {
+  total_decisions: number;
+  by_status: Record<string, number>;
+  by_outcome: Record<string, number>;
+  avg_confidence: number | null;
+  time_range_days: number;
+  actuator_counts: Record<string, number>;
+  anomaly_count: number;
+  envelope_violations: number;
+  system_mode: string;
+  actuator_state: ActuatorStatus;
 }
 
 // ============================================================================

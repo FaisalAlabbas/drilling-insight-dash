@@ -6,6 +6,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AIEvaluation from "./pages/AIEvaluation";
 import DataQuality from "./pages/DataQuality";
+import Verification from "./pages/Verification";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/ai-evaluation" element={<AIEvaluation />} />
           <Route path="/data-quality" element={<DataQuality />} />
+          <Route path="/verification" element={<Verification />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

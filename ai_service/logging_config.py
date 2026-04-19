@@ -91,6 +91,7 @@ def log_prediction(
     gate_status: str,
     model_or_rules: str,
     user_id: Optional[str] = None,
+    system_mode: Optional[str] = None,
 ) -> None:
     """
     Log a prediction result with structured data.
@@ -103,6 +104,7 @@ def log_prediction(
         gate_status: Safety gate outcome (ACCEPTED, REDUCED, REJECTED)
         model_or_rules: Source of recommendation (MODEL or RULES)
         user_id: Optional user ID
+        system_mode: Operating mode (SIMULATION or PROTOTYPE)
     """
     extra_data = {
         "event": "prediction",
@@ -114,6 +116,8 @@ def log_prediction(
     }
     if user_id:
         extra_data["user_id"] = user_id
+    if system_mode:
+        extra_data["system_mode"] = system_mode
 
     record = logging.LogRecord(
         name=logger.name,
@@ -153,6 +157,51 @@ def log_model_load(logger: logging.Logger, success: bool, path: str, error: Opti
         pathname="",
         lineno=0,
         msg="Model loading" if success else "Model load failed",
+        args=(),
+        exc_info=None,
+    )
+    record.extra_data = extra_data
+    logger.handle(record)
+
+
+def log_actuator_event(
+    logger: logging.Logger,
+    command: str,
+    outcome: str,
+    state: str,
+    is_simulated: bool,
+    message: str,
+    system_mode: Optional[str] = None,
+) -> None:
+    """
+    Log a virtual actuator event with structured data.
+
+    Args:
+        logger: Logger instance
+        command: Steering command that was sent
+        outcome: Actuator outcome (ACK_EXECUTED, ACK_REDUCED, etc.)
+        state: Current actuator state after execution
+        is_simulated: Whether this was a simulated execution
+        message: Human-readable description
+        system_mode: Operating mode (SIMULATION or PROTOTYPE)
+    """
+    extra_data: dict[str, Any] = {
+        "event": "actuator",
+        "command": command,
+        "outcome": outcome,
+        "actuator_state": state,
+        "is_simulated": is_simulated,
+        "message": message,
+    }
+    if system_mode:
+        extra_data["system_mode"] = system_mode
+
+    record = logging.LogRecord(
+        name=logger.name,
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg=f"Actuator {outcome}: {command}",
         args=(),
         exc_info=None,
     )

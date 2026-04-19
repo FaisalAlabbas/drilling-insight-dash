@@ -140,6 +140,8 @@ class Decision(Base):
     feature_summary: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON)
     event_tags: Mapped[Optional[List[str]]] = mapped_column(JSON)
     related_signals: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON)
+    system_mode: Mapped[Optional[str]] = mapped_column(String(20), default="SIMULATION")
+    actuator_outcome: Mapped[Optional[str]] = mapped_column(String(30))
 
     # Relationships
     well: Mapped["Well"] = relationship("Well", back_populates="decisions")

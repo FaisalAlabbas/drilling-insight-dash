@@ -64,7 +64,7 @@ class Settings:
     CORS_ORIGINS: List[str] = [
         origin.strip()
         for origin in os.getenv(
-            "AI_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080"
+            "AI_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080,http://localhost:8081,http://127.0.0.1:8081"
         ).split(",")
     ]
 
@@ -74,20 +74,29 @@ class Settings:
     # API settings
     API_TIMEOUT: int = int(os.getenv("API_TIMEOUT", "30"))
 
+    # System operating mode — SIMULATION (default) or PROTOTYPE
+    _raw_mode = os.getenv("SYSTEM_MODE", "SIMULATION").upper().strip()
+    SYSTEM_MODE: str = _raw_mode if _raw_mode in ("SIMULATION", "PROTOTYPE") else "SIMULATION"
+
     # Safety thresholds
     CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
     DLS_BLOCK_THRESHOLD: float = float(os.getenv("DLS_BLOCK_THRESHOLD", "3.0"))
+
+    # Actuator settings
+    ACTUATOR_DERATE_THRESHOLD: float = float(os.getenv("ACTUATOR_DERATE_THRESHOLD", "0.65"))
 
     @classmethod
     def to_dict(cls) -> dict:
         """Return settings as dictionary"""
         return {
+            "system_mode": cls.SYSTEM_MODE,
             "excel_path": cls.EXCEL_PATH,
             "model_path": cls.MODEL_PATH,
             "cors_origins": cls.CORS_ORIGINS,
             "log_level": cls.LOG_LEVEL,
             "confidence_threshold": cls.CONFIDENCE_THRESHOLD,
             "dls_block_threshold": cls.DLS_BLOCK_THRESHOLD,
+            "actuator_derate_threshold": cls.ACTUATOR_DERATE_THRESHOLD,
         }
 
 

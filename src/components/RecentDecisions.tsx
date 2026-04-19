@@ -51,6 +51,19 @@ export function RecentDecisions() {
                 ) : (
                   <XCircle className="h-3 w-3 text-signal-red" />
                 )}
+                {d.pete_status && (
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full",
+                      d.pete_status.overall_status === "WITHIN_LIMITS"
+                        ? "bg-signal-green"
+                        : d.pete_status.overall_status === "NEAR_LIMIT"
+                          ? "bg-signal-yellow"
+                          : "bg-signal-red"
+                    )}
+                    title={`PETE: ${d.pete_status.overall_status.replace(/_/g, " ")}`}
+                  />
+                )}
                 <span className="text-[9px] text-muted-foreground">
                   {new Date(d.timestamp).toLocaleTimeString("en-US", {
                     hour12: false,

@@ -21,7 +21,7 @@ import {
   generateAlertsFromData,
   createManualAlert,
 } from "./mock-data";
-import { getRecommendation, checkBackendHealth, fetchTelemetry, type BackendHealthStatus } from "./api-service";
+import { getRecommendation, checkBackendHealth, fetchTelemetry, fetchActuatorStatus, type BackendHealthStatus, type BackendHealthResult } from "./api-service";
 import { API_BASE_URL } from "./config";
 import { useConfig } from "./configApi";
 import {
@@ -33,6 +33,7 @@ import {
 import { useTelemetryStream } from "@/hooks/useTelemetryStream";
 import { IS_PRODUCTION } from "./config";
 import type { UserRole, EdgeHealth, SamplingRate } from "./types";
+import type { SystemMode, ActuatorStatus } from "./api-types";
 
 type SidebarModule = ModuleId;
 
@@ -67,6 +68,10 @@ export interface DashboardContextType {
   isBackendDegraded: boolean;
   /** True when backend is up but reports impaired subsystem (e.g. no telemetry data). */
   isBackendImpaired: boolean;
+  /** Active system operating mode from backend. */
+  systemMode: SystemMode;
+  /** Virtual actuator state from backend. */
+  actuatorStatus: ActuatorStatus | null;
   /** JWT auth token for admin API calls. */
   authToken: string | null;
   /** Authenticated username, or null when not logged in. */
@@ -91,6 +96,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const [backendStatus, setBackendStatus] = useState<BackendHealthStatus>("unreachable");
   // Initial state IS mock data — flag must start true since initial arrays are synthetic
   const [isMockData, setIsMockData] = useState(true);
+  // System operating mode from backend
+  const [systemMode, setSystemMode] = useState<SystemMode>("SIMULATION");
+  // Virtual actuator state
+  const [actuatorStatus, setActuatorStatus] = useState<ActuatorStatus | null>(null);
   // Auth state
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<string | null>(null);
@@ -195,21 +204,37 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   // Check backend health on mount and periodically (every 30 s) so the app
   // can recover if the backend comes back online after an outage.
   useEffect(() => {
-    checkBackendHealth().then(setBackendStatus);
+    const handleHealth = (result: BackendHealthResult) => {
+      setBackendStatus(result.status);
+      if (result.systemMode) setSystemMode(result.systemMode);
+    };
+    checkBackendHealth().then(handleHealth);
     const id = setInterval(() => {
-      checkBackendHealth().then(setBackendStatus);
+      checkBackendHealth().then(handleHealth);
     }, 30_000);
     return () => clearInterval(id);
   }, []);
 
   // Stream telemetry via WebSocket with fallback to mock generation
-  const { telemetry: wstelemetry, connected: wsConnected } = useTelemetryStream({
+  const { telemetry: wstelemetry, connected: wsConnected, actuatorStatus: wsActuatorStatus } = useTelemetryStream({
     maxBufferSize: 300,
     onError: (error) => {
       console.error("WebSocket telemetry stream error:", error);
       // Will fallback to polling
     },
   });
+
+  // Poll actuator status when backend is available (fallback when WS not connected)
+  useEffect(() => {
+    if (!backendAvailable) return;
+    // Skip polling if WebSocket is providing actuator status
+    if (wsConnected) return;
+    fetchActuatorStatus().then((s) => { if (s) setActuatorStatus(s); });
+    const id = setInterval(() => {
+      fetchActuatorStatus().then((s) => { if (s) setActuatorStatus(s); });
+    }, 5_000);
+    return () => clearInterval(id);
+  }, [backendAvailable, wsConnected]);
 
   // Initialize telemetry with WebSocket data or mock
   const [telemetrySourceIsWebSocket, setTelemetrySourceIsWebSocket] = useState(false);
@@ -222,6 +247,13 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       setIsMockData(false);
     }
   }, [wstelemetry]);
+
+  // Integrate WebSocket actuator status (real-time, takes priority over polling)
+  useEffect(() => {
+    if (wsActuatorStatus) {
+      setActuatorStatus(wsActuatorStatus);
+    }
+  }, [wsActuatorStatus]);
 
   // Auto-stream telemetry from backend polling as fallback or mock
   const telemetryRef = useRef(telemetry);
@@ -371,6 +403,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         isMockData,
         isBackendDegraded,
         isBackendImpaired,
+        systemMode,
+        actuatorStatus,
         authToken,
         authUser,
         login,

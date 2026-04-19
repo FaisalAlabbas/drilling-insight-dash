@@ -10,6 +10,8 @@ import {
   DataQualityMetrics,
   ModelMetrics,
   PredictResponse,
+  ActuatorStatus,
+  DecisionStats,
 } from "./api-types";
 import {
   TelemetryPacketSchema,
@@ -17,6 +19,8 @@ import {
   DataQualityMetricsSchema,
   ModelMetricsSchema,
   PredictResponseSchema,
+  ActuatorStatusSchema,
+  DecisionStatsSchema,
   parseResponseVerbose,
 } from "./zod-schemas";
 import { predictDecision, type PredictPayload } from "./aiApi";
@@ -180,16 +184,42 @@ export async function fetchModelMetrics(): Promise<ModelMetrics | null> {
   );
 }
 
+/**
+ * Fetch virtual actuator status from backend
+ */
+export async function fetchActuatorStatus(): Promise<ActuatorStatus | null> {
+  return fetchAndValidate<ActuatorStatus>(
+    "/actuator/status",
+    ActuatorStatusSchema,
+    "fetchActuatorStatus"
+  );
+}
+
+/**
+ * Fetch decision statistics for the verification page
+ */
+export async function fetchDecisionStats(): Promise<DecisionStats | null> {
+  return fetchAndValidate<DecisionStats>(
+    "/decisions/stats",
+    DecisionStatsSchema,
+    "fetchDecisionStats"
+  );
+}
+
+import type { SystemMode } from "./api-types";
+
 export type BackendHealthStatus = "healthy" | "degraded" | "unreachable";
+
+export interface BackendHealthResult {
+  status: BackendHealthStatus;
+  systemMode: SystemMode | null;
+}
 
 /**
  * Health check for backend with timeout.
- * Returns the real status so callers can distinguish:
- *  - "healthy"     → everything works
- *  - "degraded"    → backend is up but some subsystem (e.g. telemetry) is impaired
- *  - "unreachable" → backend did not respond or returned unhealthy
+ * Returns the real status and system operating mode.
  */
-export async function checkBackendHealth(): Promise<BackendHealthStatus> {
+export async function checkBackendHealth(): Promise<BackendHealthResult> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -201,15 +231,18 @@ export async function checkBackendHealth(): Promise<BackendHealthStatus> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      return "unreachable";
+      return { status: "unreachable", systemMode: null };
     }
 
-    const health = await response.json() as { status?: string };
+    const health = await response.json() as { status?: string; system_mode?: string };
+    const systemMode = (health.system_mode === "SIMULATION" || health.system_mode === "PROTOTYPE")
+      ? health.system_mode as SystemMode
+      : null;
 
-    if (health.status === "healthy") return "healthy";
-    if (health.status === "degraded") return "degraded";
-    return "unreachable"; // "unhealthy" or unexpected value
+    if (health.status === "healthy") return { status: "healthy", systemMode };
+    if (health.status === "degraded") return { status: "degraded", systemMode };
+    return { status: "unreachable", systemMode };
   } catch {
-    return "unreachable";
+    return { status: "unreachable", systemMode: null };
   }
 }

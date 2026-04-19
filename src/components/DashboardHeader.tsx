@@ -1,5 +1,6 @@
-import { Search, Activity, Brain, Download, AlertTriangle } from "lucide-react";
+import { Search, Activity, Brain, Download, AlertTriangle, ShieldCheck } from "lucide-react";
 import { useDashboard } from "@/lib/dashboard-context";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -25,12 +26,14 @@ export function DashboardHeader() {
     isMockData,
     isBackendDegraded,
     isBackendImpaired,
+    systemMode,
   } = useDashboard();
   const navigate = useNavigate();
   const location = useLocation();
 
   const isDashboard = location.pathname === "/";
   const isEvaluation = location.pathname === "/ai-evaluation";
+  const isVerification = location.pathname === "/verification";
 
   const handleExport = () => {
     exportToCSV(telemetry, decisions);
@@ -60,7 +63,24 @@ export function DashboardHeader() {
         <div className="bg-signal-yellow/20 text-signal-yellow border-b border-signal-yellow/30 flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
-            Development mode — displaying simulated data (backend not connected)
+            {systemMode === "PROTOTYPE"
+              ? "Prototype Mode — awaiting prototype connection"
+              : "Simulation Mode — displaying simulated telemetry"}
+          </span>
+        </div>
+      )}
+      {!isBackendDegraded && !isBackendImpaired && !isMockData && (
+        <div className={cn(
+          "flex items-center justify-center gap-2 px-4 py-1 text-xs font-medium border-b",
+          systemMode === "PROTOTYPE"
+            ? "bg-signal-green/10 text-signal-green border-signal-green/20"
+            : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+        )}>
+          <Activity className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            {systemMode === "PROTOTYPE"
+              ? "Prototype Mode — receiving live prototype telemetry"
+              : "Simulation Mode — streaming simulated telemetry from backend"}
           </span>
         </div>
       )}
@@ -70,8 +90,14 @@ export function DashboardHeader() {
           <h1 className="text-sm font-semibold tracking-tight hidden sm:block">
             Surface Dashboard
           </h1>
-          <span className="text-[10px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-sm hidden md:inline">
-            MONITORING ONLY
+          <span
+            className={`text-[10px] font-mono px-2 py-0.5 rounded-sm hidden md:inline ${
+              systemMode === "PROTOTYPE"
+                ? "bg-signal-green/15 text-signal-green"
+                : "bg-cyan-500/15 text-cyan-400"
+            }`}
+          >
+            {systemMode === "PROTOTYPE" ? "PROTOTYPE CONNECTED" : "SIMULATION MODE"}
           </span>
         </div>
 
@@ -104,6 +130,15 @@ export function DashboardHeader() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => navigate("/verification")}
+                className="flex items-center gap-2 text-xs h-8"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Verification</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleExport}
                 className="flex items-center gap-2 text-xs h-8"
               >
@@ -112,7 +147,7 @@ export function DashboardHeader() {
               </Button>
             </>
           )}
-          {isEvaluation && (
+          {(isEvaluation || isVerification) && (
             <Button
               variant="outline"
               size="sm"

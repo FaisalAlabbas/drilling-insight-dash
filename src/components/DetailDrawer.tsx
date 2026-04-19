@@ -71,7 +71,18 @@ export function DetailDrawer() {
                   </div>
                   <div className="bg-muted rounded-md p-2">
                     <p className="text-muted-foreground">Execution</p>
-                    <p className="font-semibold">{decision.execution_status}</p>
+                    <p className={cn(
+                      "font-semibold",
+                      decision.execution_status === "SENT"
+                        ? "text-signal-green"
+                        : decision.execution_status === "SIMULATED_SENT"
+                          ? "text-cyan-400"
+                          : ""
+                    )}>
+                      {decision.execution_status === "SIMULATED_SENT"
+                        ? "SIMULATED"
+                        : decision.execution_status}
+                    </p>
                   </div>
                   {decision.rejection_reason && (
                     <div className="bg-muted rounded-md p-2">
@@ -86,6 +97,36 @@ export function DetailDrawer() {
                       <p className="text-muted-foreground">Fallback</p>
                       <p className="font-mono text-signal-amber">
                         {decision.fallback_mode}
+                      </p>
+                    </div>
+                  )}
+                  {decision.system_mode && (
+                    <div className="bg-muted rounded-md p-2">
+                      <p className="text-muted-foreground">Mode</p>
+                      <p className={cn(
+                        "font-mono text-[11px]",
+                        decision.system_mode === "PROTOTYPE"
+                          ? "text-signal-green"
+                          : "text-cyan-400"
+                      )}>
+                        {decision.system_mode}
+                      </p>
+                    </div>
+                  )}
+                  {decision.actuator_outcome && (
+                    <div className="bg-muted rounded-md p-2">
+                      <p className="text-muted-foreground">Actuator</p>
+                      <p className={cn(
+                        "font-mono font-semibold text-[11px]",
+                        decision.actuator_outcome === "ACK_EXECUTED"
+                          ? "text-signal-green"
+                          : decision.actuator_outcome === "ACK_REDUCED"
+                            ? "text-signal-amber"
+                            : decision.actuator_outcome === "ACK_BLOCKED"
+                              ? "text-muted-foreground"
+                              : "text-signal-red"
+                      )}>
+                        {decision.actuator_outcome.replace("ACK_", "")}
                       </p>
                     </div>
                   )}
@@ -129,6 +170,53 @@ export function DetailDrawer() {
                   ))}
                 </div>
               </div>
+
+              {/* PETE Operating Envelope */}
+              {decision.pete_status && (
+                <div className="border-t border-border pt-4">
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
+                    Operating Envelope (PETE)
+                  </h4>
+                  <div className="space-y-2">
+                    {decision.pete_status.parameter_margins.map((pm) => {
+                      const pct = Math.max(0, Math.min(1, (pm.margin + 1) / 2)) * 100;
+                      const barColor =
+                        pm.status === "OK"
+                          ? "bg-signal-green"
+                          : pm.status === "NEAR_LIMIT"
+                            ? "bg-signal-yellow"
+                            : "bg-signal-red";
+                      return (
+                        <div key={pm.name} className="text-[11px]">
+                          <div className="flex justify-between mb-0.5">
+                            <span className="font-mono text-muted-foreground">{pm.name}</span>
+                            <span className="font-mono">
+                              {pm.value.toFixed(2)}
+                              {pm.lower_limit != null && pm.upper_limit != null
+                                ? ` [${pm.lower_limit.toFixed(1)}–${pm.upper_limit.toFixed(1)}]`
+                                : pm.upper_limit != null
+                                  ? ` ≤${pm.upper_limit.toFixed(1)}`
+                                  : ""}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={cn("h-full rounded-full transition-all", barColor)}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {decision.pete_status.formation_sensitivity && (
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      Formation: <span className="capitalize font-semibold">{decision.pete_status.formation_sensitivity}</span>
+                      {" · "}Max DLS change: {decision.pete_status.max_dls_change.toFixed(2)}°/100ft
+                    </p>
+                  )}
+                </div>
+              )}
             </>
           )}
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { TelemetryPacket } from "@/lib/api-types";
+import type { TelemetryPacket, ActuatorStatus } from "@/lib/api-types";
 import { API_BASE_URL } from "@/lib/config";
 
 interface TelemetryStreamMessage {
@@ -13,6 +13,9 @@ interface TelemetryStreamMessage {
   timestamp: string;
   data?: TelemetryPacket;
   message?: string;
+  system_mode?: string;
+  telemetry_source?: string;
+  actuator_status?: ActuatorStatus | null;
 }
 
 interface UseTelemetryStreamOptions {
@@ -48,6 +51,8 @@ export function useTelemetryStream(options: UseTelemetryStreamOptions = {}) {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number>(Date.now());
+  const [telemetrySource, setTelemetrySource] = useState<string | null>(null);
+  const [actuatorStatus, setActuatorStatus] = useState<ActuatorStatus | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectCountRef = useRef(0);
@@ -96,6 +101,9 @@ export function useTelemetryStream(options: UseTelemetryStreamOptions = {}) {
 
           if (message.type === "telemetry" && message.data) {
             const packet = message.data as TelemetryPacket;
+            if (message.telemetry_source) {
+              setTelemetrySource(message.telemetry_source);
+            }
             setBuffer((prev) => {
               const next = [...prev, packet];
               // Keep only latest N points
@@ -106,6 +114,14 @@ export function useTelemetryStream(options: UseTelemetryStreamOptions = {}) {
             const err = new Error(message.message || "WebSocket error");
             setError(err);
             onError?.(err);
+          } else if (message.type === "connection_established") {
+            if (message.telemetry_source) {
+              setTelemetrySource(message.telemetry_source);
+            }
+          } else if (message.type === "recommendation") {
+            if (message.actuator_status) {
+              setActuatorStatus(message.actuator_status);
+            }
           }
         } catch (err) {
           const parseError = new Error(`Failed to parse WebSocket message: ${err}`);
@@ -205,5 +221,7 @@ export function useTelemetryStream(options: UseTelemetryStreamOptions = {}) {
     connected,
     error,
     lastMessageTime,
+    telemetrySource,
+    actuatorStatus,
   };
 }

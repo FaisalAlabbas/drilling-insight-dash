@@ -145,9 +145,15 @@ export function generateDecisionRecord(
     confidence_score: confidence,
     gate_outcome,
     rejection_reason,
-    execution_status: isRejected ? "BLOCKED" : "SENT",
+    execution_status: isRejected ? "BLOCKED" : "SIMULATED_SENT",
     fallback_mode,
     event_tags: tags,
+    system_mode: "SIMULATION",
+    actuator_outcome: isRejected
+      ? "ACK_BLOCKED"
+      : confidence < 0.65
+        ? "ACK_REDUCED"
+        : "ACK_EXECUTED",
   };
 }
 
